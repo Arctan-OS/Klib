@@ -93,6 +93,7 @@ struct ARC_DriverDef {
 	// The index of this driver
 	uint64_t index;
 	uint64_t instance_counter;
+ 	uint32_t *pci_codes; // Terminates with ARC_DRI_PCI_TERMINATOR if non-NULL
 	char *name_format;
 	// Specific
 	uint64_t identifer;
@@ -123,6 +124,8 @@ struct ARC_SuperDriverDef {
 
 struct ARC_Resource *init_resource(int dri_group, uint64_t dri_index, void *args);
 int init_resource_at(char *base_path, int dri_group, uint64_t dri_index, void *args);
+struct ARC_Resource *init_pci_resource(uint16_t vendor, uint16_t device, void *args);
+int init_pci_resource_at(char *base_path, uint16_t vendor, uint16_t device, void *args);
 int uninit_resource(struct ARC_Resource *resource);
 struct ARC_Reference *reference_resource(struct ARC_Resource *resource);
 int unrefrence_resource(struct ARC_Reference *reference);
