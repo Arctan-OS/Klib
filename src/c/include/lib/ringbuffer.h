@@ -40,8 +40,11 @@ struct ARC_Ringbuffer {
 	ARC_GenericMutex lock;
 };
 
-size_t ringbuffer_push(struct ARC_Ringbuffer *ringbuffer, void *data, int block);
-int ringbuffer_pop(struct ARC_Ringbuffer *ringbuffer, size_t idx);
-struct ARC_Ringbuffer *init_ringbuffer(void *base, size_t objects, size_t obj_size);
+size_t ringbuffer_allocate(struct ARC_Ringbuffer *ringbuffer, int block);
+int ringbuffer_free(struct ARC_Ringbuffer *ringbuffer, size_t idx);
+
+size_t ringbuffer_write(struct ARC_Ringbuffer *ringbuffer, size_t idx, void *data);
+
+struct ARC_Ringbuffer *init_ringbuffer(void *base, size_t objs, size_t obj_size);
 
 #endif
