@@ -127,45 +127,24 @@ struct ARC_Resource *init_resource(int dri_group, uint64_t dri_index, void *args
 	if (def == NULL) {
 		free(resource);
 		ARC_DEBUG(ERR, "No driver definition found\n");
+
 		return NULL;
 	}
 
-	ARC_DEBUG(INFO, "Calling %p\n", def->init);
+	if (def->init == NULL) {
+		free(resource);
+		ARC_DEBUG(ERR, "Driver does not define an initialization function\n");
+
+		return NULL;
+	}
 
 	int ret = def->init(resource, args);
+
 	if (ret != 0) {
 		ARC_DEBUG(ERR, "Driver init function returned %d\n", ret);
-		// TODO: Figure out what to do here
 	}
 
 	return resource;
-}
-
-int init_resource_at(char *base_path, int dri_group, uint64_t dri_index, void *args) {
-	if (base_path == NULL) {
-		return -1;
-	}
-
-	struct ARC_Resource *res = init_resource(dri_group, dri_index, args);
-
-	if (res == NULL) {
-		return -1;
-	}
-
-	char name[128] = { 0 };
-	sprintf(name, res->driver->name_format, res->instance);
-	char *filepath = (char *)alloc(strlen(base_path) + strlen(name));
-	sprintf(filepath, "%s/%s", base_path, name);
-
-	if (vfs_create(filepath, ARC_STD_PERM | 1, ARC_VFS_N_DIR, NULL) != 0) {
-		return -2;
-	}
-
-	if (vfs_mount(filepath, res) != 0) {
-		return -3;
-	}
-
-	return 0;
 }
 
 // TODO: There is probably a better way to earch drivers than this
@@ -218,76 +197,17 @@ struct ARC_Resource *init_pci_resource(uint16_t vendor, uint16_t device, void *a
 		return NULL;
 	}
 
-	struct ARC_Resource *resource = (struct ARC_Resource *)alloc(sizeof(*resource));
-
-	if (resource == NULL) {
-		ARC_DEBUG(ERR, "Failed to allocate memory for PCI resource\n");
-		return NULL;
-	}
-
-	memset(resource, 0, sizeof(struct ARC_Resource));
-
-	ARC_DEBUG(INFO, "Initializing PCI resource %lu (0x%04x:0x%04x)\n", current_id, vendor, device);
-
-	// Initialize resource properties
-	// TODO: Simplify these loads and incs into a single instruction, currently it is no better
-	//       than current_id++;
-	resource->id = ARC_ATOMIC_LOAD(current_id);
-	ARC_ATOMIC_INC(current_id);
+	ARC_DEBUG(INFO, "Initializing PCI resource 0x%04x:0x%04x\n", vendor, device);
 
 	int group = 0;
 	struct ARC_DriverDef *def = get_dri_def_pci(vendor, device, &group);
 
 	if (def == NULL) {
-		free(resource);
 		ARC_DEBUG(ERR, "No driver definition found\n");
 		return NULL;
 	}
 
-	ARC_DEBUG(INFO, "Found driver %d, %lu\n", group, def->index);
-
-	resource->driver = def;
-	resource->dri_group = def->index;
-	resource->dri_index = group;
-	init_static_mutex(&resource->dri_state_mutex);
-
-	resource->instance = ARC_ATOMIC_LOAD(def->instance_counter);
-	ARC_ATOMIC_INC(def->instance_counter);
-
-	int ret = def->init(resource, args);
-	if (ret != 0) {
-		ARC_DEBUG(ERR, "Driver init function returned %d\n", ret);
-		// TODO: Figure out what to do here
-	}
-
-	return resource;
-}
-
-int init_pci_resource_at(char *base_path, uint16_t vendor, uint16_t device, void *args) {
-	if (base_path == NULL) {
-		return -1;
-	}
-
-	struct ARC_Resource *res = init_pci_resource(vendor, device, args);
-
-	if (res == NULL) {
-		return -1;
-	}
-
-	char name[128] = { 0 };
-	sprintf(name, res->driver->name_format, res->instance);
-	char *filepath = (char *)alloc(strlen(base_path) + strlen(name));
-	sprintf(filepath, "%s/%s", base_path, name);
-
-	if (vfs_create(filepath, ARC_STD_PERM | 1, ARC_VFS_N_DIR, NULL) != 0) {
-		return -2;
-	}
-
-	if (vfs_mount(filepath, res) != 0) {
-		return -3;
-	}
-
-	return 0;
+	return init_resource(group, def->index, args);
 }
 
 int uninit_resource(struct ARC_Resource *resource) {

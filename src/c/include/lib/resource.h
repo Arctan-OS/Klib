@@ -88,7 +88,6 @@ struct ARC_File {
 // Driver definitions
 // NOTE: No function pointer in a driver definition
 //       should be NULL.
-
 struct ARC_DriverDef {
 	// The index of this driver
 	uint64_t index;
@@ -108,6 +107,10 @@ struct ARC_DriverDef {
 	int (*seek)(struct ARC_File *file, struct ARC_Resource *res);
 	/// Rename the resource.
 	int (*rename)(char *newname, struct ARC_Resource *res);
+	/// Stat the given driver, if filename is NULL return the stat of the current driver, otherwise return the stat of the file at that path.
+	int (*stat)(struct ARC_Resource *res, char *filename, struct stat *stat);
+	/// A function to signal modification of driver parameters.
+	int (*control)(struct ARC_Resource *res, void *buffer, size_t size);
 };
 
 struct ARC_SuperDriverDef {
@@ -116,16 +119,13 @@ struct ARC_SuperDriverDef {
 	int (*link)(char *a, char *b);
 	/// Rename the file.
 	int (*rename)(char *a, char *b);
-	int (*stat)(struct ARC_Resource *res, char *filename, struct stat *stat);
 	/// Acquire the needed information for initalization of a file resource. The return value should be passed as the argument of the function.
 	void *(*locate)(struct ARC_Resource *res, char *filename);
 };
 // /Driver definitions
 
 struct ARC_Resource *init_resource(int dri_group, uint64_t dri_index, void *args);
-int init_resource_at(char *base_path, int dri_group, uint64_t dri_index, void *args);
 struct ARC_Resource *init_pci_resource(uint16_t vendor, uint16_t device, void *args);
-int init_pci_resource_at(char *base_path, uint16_t vendor, uint16_t device, void *args);
 int uninit_resource(struct ARC_Resource *resource);
 struct ARC_Reference *reference_resource(struct ARC_Resource *resource);
 int unrefrence_resource(struct ARC_Reference *reference);
