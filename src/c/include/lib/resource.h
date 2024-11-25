@@ -79,6 +79,8 @@ struct ARC_File {
 	struct ARC_VFSNode *node;
 	/// Reference
 	struct ARC_Reference *reference;
+	/// Reference counter for the decsriptor itself.
+	int ref_count;
 	/// Mode the file was opened with.
 	uint32_t mode;
 	/// Flags the file was opened with.

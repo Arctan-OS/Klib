@@ -98,6 +98,10 @@ static struct ARC_DriverDef *get_dri_def(int group, uint64_t index) {
 }
 
 struct ARC_Resource *init_resource(int dri_group, uint64_t dri_index, void *args) {
+	if (dri_group < 0 || dri_group >= 4) {
+		return NULL;
+	}
+
 	struct ARC_Resource *resource = (struct ARC_Resource *)alloc(sizeof(struct ARC_Resource));
 
 	if (resource == NULL) {

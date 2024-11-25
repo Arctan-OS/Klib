@@ -60,7 +60,7 @@ int strncmp(char *a, char *b, size_t len) {
 		}
 	}
 
-	return ua[i] - ub[i];
+	return (ua[i] - ub[i]);
 }
 
 void memset(void *a, uint8_t value, size_t size) {
