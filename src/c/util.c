@@ -29,6 +29,10 @@
 #include <global.h>
 
 int strcmp(char *a, char *b) {
+	if (a == NULL || b == NULL) {
+		return -1;
+	}
+
 	uint8_t *ua = (uint8_t *)a;
 	uint8_t *ub = (uint8_t *)b;
 
@@ -50,6 +54,10 @@ int strcmp(char *a, char *b) {
 }
 
 int strncmp(char *a, char *b, size_t len) {
+	if (a == NULL || b == NULL || len == 0) {
+		return -1;
+	}
+
 	uint8_t *ua = (uint8_t *)a;
 	uint8_t *ub = (uint8_t *)b;
 
@@ -64,18 +72,30 @@ int strncmp(char *a, char *b, size_t len) {
 }
 
 void memset(void *a, uint8_t value, size_t size) {
+	if (a == NULL || size == 0) {
+		return;
+	}
+
 	for (size_t i = 0; i < size; i++) {
 		*((uint8_t *)a + i) = value;
 	}
 }
 
 void memcpy(void *a, void *b, size_t size) {
+	if (a == NULL || b == NULL || size == 0) {
+		return;
+	}
+
 	for (size_t i = 0; i < size; i++) {
 		*(uint8_t *)(a + i) = *(uint8_t *)(b + i);
 	}
 }
 
 size_t strlen(char *a) {
+	if (a == NULL) {
+		return 0;
+	}
+
 	size_t i = 0;
 
 	while (*(a + i) != 0) {
@@ -86,6 +106,10 @@ size_t strlen(char *a) {
 }
 
 char *strdup(char *a) {
+	if (a == NULL) {
+		return NULL;
+	}
+
 	size_t len = strlen(a);
 
 	char *b = alloc(len + 1);
@@ -96,6 +120,10 @@ char *strdup(char *a) {
 }
 
 char *strndup(char *a, size_t n) {
+	if (a == NULL || n == 0) {
+		return NULL;
+	}
+
 	char *b = alloc(n + 1);
 	memset(b, 0, n + 1);
 	memcpy(b, a, n);
@@ -106,6 +134,10 @@ char *strndup(char *a, size_t n) {
 static const char *NUMBERS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 long strtol(char *string, char **end, int base) {
+	if (string == NULL || base == 0) {
+		return 0;
+	}
+
 	char c = *string;
 	int offset = 0;
 	long number = 0;
