@@ -110,7 +110,7 @@ void *ticket_lock(struct ARC_TicketLock *head) {
 
 void ticket_lock_yield(void *ticket) {
 	if (ticket == NULL) {
-		ARC_DEBUG(ERR, "Head is NULL\n");
+		ARC_DEBUG(ERR, "Ticket is NULL\n");
 		// TODO: What to do?
 	}
 
@@ -170,11 +170,13 @@ int ticket_lock_freeze(void *ticket) {
 
 	head->is_frozen = 1;
 
-	ticket_unlock(lock);
+	head->next = lock->next;
 
 	while (head->next != NULL) {
 		__asm__("pause");
 	}
+
+	head->next = lock;
 
 	return 0;
 }
