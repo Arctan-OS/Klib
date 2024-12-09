@@ -42,63 +42,11 @@
 **  3            | Base device drivers.
 */
 
-extern struct ARC_DriverDef __DRIVERS0_START[];
-extern struct ARC_DriverDef __DRIVERS1_START[];
-extern struct ARC_DriverDef __DRIVERS2_START[];
-extern struct ARC_DriverDef __DRIVERS3_START[];
-extern struct ARC_DriverDef __DRIVERS0_END[];
-extern struct ARC_DriverDef __DRIVERS1_END[];
-extern struct ARC_DriverDef __DRIVERS2_END[];
-extern struct ARC_DriverDef __DRIVERS3_END[];
-
 uint64_t current_id = 0;
 
-// TODO: This can most definitely be optimzied
-static struct ARC_DriverDef *get_dri_def(int group, uint64_t index) {
-	struct ARC_DriverDef *start = NULL;
-	struct ARC_DriverDef *end = NULL;
-
-	switch (group) {
-		case 0: {
-			start = __DRIVERS0_START;
-			end = __DRIVERS0_END;
-			break;
-		}
-
-		case 1: {
-			start = __DRIVERS1_START;
-			end = __DRIVERS1_END;
-			break;
-		}
-
-		case 2: {
-			start = __DRIVERS2_START;
-			end = __DRIVERS2_END;
-			break;
-		}
-
-		case 3: {
-			start = __DRIVERS3_START;
-			end = __DRIVERS3_END;
-			break;
-		}
-	}
-
-	if (start == NULL || end == NULL) {
-		return NULL;
-	}
-
-	for (struct ARC_DriverDef *def = start; def < end; def++) {
-		if (def->index == index) {
-			return def;
-		}
-	}
-
-	return NULL;
-}
-
-struct ARC_Resource *init_resource(int dri_group, uint64_t dri_index, void *args) {
-	if (dri_group < 0 || dri_group >= 4) {
+struct ARC_Resource *init_resource(uint64_t dri_index, void *args) {
+	if (dri_index >= ARC_DRIDEF_COUNT) {
+		ARC_DEBUG(ERR, "Invalid driver index (0x%"PRIx64")\n", dri_index);
 		return NULL;
 	}
 
@@ -111,18 +59,17 @@ struct ARC_Resource *init_resource(int dri_group, uint64_t dri_index, void *args
 
 	memset(resource, 0, sizeof(struct ARC_Resource));
 
-	ARC_DEBUG(INFO, "Initializing resource %lu (%d, %lu)\n", current_id, dri_group, dri_index);
+	ARC_DEBUG(INFO, "Initializing resource %lu (Index: %lu)\n", current_id, dri_index);
 
 	// Initialize resource properties
 	resource->id = ARC_ATOMIC_LOAD(current_id);
 	ARC_ATOMIC_INC(current_id);
 
-	resource->dri_group = dri_group;
 	resource->dri_index = dri_index;
 	init_static_mutex(&resource->dri_state_mutex);
 
 	// Fetch and set the appropriate definition
-	struct ARC_DriverDef *def = get_dri_def(dri_group, dri_index);
+	struct ARC_DriverDef *def = __DRIVER_LOOKUP_TABLE[dri_index];
 	resource->driver = def;
 
 	resource->instance = ARC_ATOMIC_LOAD(def->instance_counter);
@@ -151,48 +98,26 @@ struct ARC_Resource *init_resource(int dri_group, uint64_t dri_index, void *args
 	return resource;
 }
 
-// TODO: There is probably a better way to earch drivers than this
-static struct ARC_DriverDef *get_dri_def_pci(uint16_t vendor, uint16_t device, int *group) {
+uint64_t get_dri_def_pci(uint16_t vendor, uint16_t device) {
 	uint32_t target = (vendor << 16) | device;
-	struct ARC_DriverDef *start = __DRIVERS2_START;
-	struct ARC_DriverDef *end = __DRIVERS2_START;
 
-	*group = 2;
+	for (uint64_t i = 0; i < ARC_DRIDEF_COUNT; i++) {
+		struct ARC_DriverDef *def = __DRIVER_LOOKUP_TABLE[i];
 
-	for (struct ARC_DriverDef *def = start; def < end; def++) {
 		if (def->pci_codes == NULL) {
 			continue;
 		}
 
 		for (uint32_t code = 0;; code++) {
-			if (def->pci_codes[code] == ARC_DRI_PCI_TERMINATOR) {
+			if (def->pci_codes[code] == ARC_DRIDEF_PCI_TERMINATOR) {
 				break;
 			} else if (def->pci_codes[code] == target) {
-				return def;
+				return i;
 			}
 		}
 	}
 
-	start = __DRIVERS3_START;
-	end = __DRIVERS3_END;
-
-	*group = 3;
-
-	for (struct ARC_DriverDef *def = start; def < end; def++) {
-		if (def->pci_codes == NULL) {
-			continue;
-		}
-
-		for (uint32_t code = 0;; code++) {
-			if (def->pci_codes[code] == ARC_DRI_PCI_TERMINATOR) {
-				break;
-			} else if (def->pci_codes[code] == target) {
-				return def;
-			}
-		}
-	}
-
-	return NULL;
+	return (uint64_t)-1;
 }
 
 struct ARC_Resource *init_pci_resource(uint16_t vendor, uint16_t device, void *args) {
@@ -203,15 +128,7 @@ struct ARC_Resource *init_pci_resource(uint16_t vendor, uint16_t device, void *a
 
 	ARC_DEBUG(INFO, "Initializing PCI resource 0x%04x:0x%04x\n", vendor, device);
 
-	int group = 0;
-	struct ARC_DriverDef *def = get_dri_def_pci(vendor, device, &group);
-
-	if (def == NULL) {
-		ARC_DEBUG(ERR, "No driver definition found\n");
-		return NULL;
-	}
-
-	return init_resource(group, def->index, args);
+	return init_resource(get_dri_def_pci(vendor, device), args);
 }
 
 int uninit_resource(struct ARC_Resource *resource) {

@@ -35,8 +35,8 @@
 #define ARC_DRIVER_IDEN_SUPER 0x5245505553 // "SUPER" little endian
 #define ARC_SIGREF_CLOSE 0xA
 
-#define ARC_REGISTER_DRIVER(group, name) \
-	static struct ARC_DriverDef __driver__##name __attribute__((used, section(".drivers."#group), aligned(1)))
+#define ARC_REGISTER_DRIVER(group, name, ext) \
+	struct ARC_DriverDef __driver_##name##_##ext
 
 struct ARC_Resource {
 	ARC_GenericMutex prop_mutex;
@@ -126,7 +126,7 @@ struct ARC_SuperDriverDef {
 };
 // /Driver definitions
 
-struct ARC_Resource *init_resource(int dri_group, uint64_t dri_index, void *args);
+struct ARC_Resource *init_resource(uint64_t dri_index, void *args);
 struct ARC_Resource *init_pci_resource(uint16_t vendor, uint16_t device, void *args);
 int uninit_resource(struct ARC_Resource *resource);
 struct ARC_Reference *reference_resource(struct ARC_Resource *resource);
