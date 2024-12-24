@@ -137,115 +137,11 @@ int uninit_resource(struct ARC_Resource *resource) {
 		return 1;
 	}
 
-	if (resource->ref_count > 1) {
-		ARC_DEBUG(ERR, "Resource %lu is in use! (%lu > 1)\n", resource->id, resource->ref_count);
-		return 2;
-	}
-
 	ARC_DEBUG(INFO, "Uninitializing resource %lu\n", resource->id);
-
-	// Close all references
-	struct ARC_Reference *current_ref = resource->references;
-	while (current_ref != NULL) {
-		void *next = current_ref->next;
-
-		int sigret = 0;
-		if (current_ref->signal != NULL && (sigret = current_ref->signal(ARC_SIGREF_CLOSE, NULL)) == 0) {
-			ARC_ATOMIC_DEC(resource->ref_count);
-			free(current_ref);
-		} else {
-			ARC_DEBUG(ERR, "Cannot signal a close to reference %p (%d)\n", current_ref, sigret);
-			return 1;
-		}
-
-		current_ref = next;
-	}
 
 	resource->driver->uninit(resource);
 
 	free(resource);
-
-	return 0;
-}
-
-struct ARC_Reference *reference_resource(struct ARC_Resource *resource) {
-	if (resource == NULL) {
-		ARC_DEBUG(ERR, "Resource is NULL, cannot reference\n");
-		return NULL;
-	}
-
-	struct ARC_Reference *ref = (struct ARC_Reference *)alloc(sizeof(struct ARC_Reference));
-
-	if (ref == NULL) {
-		ARC_DEBUG(ERR, "Failed to allocate reference\n");
-		return NULL;
-	}
-
-	memset(ref, 0, sizeof(struct ARC_Reference));
-
-	// Set properties of resource
-	ref->resource = resource;
-	ARC_ATOMIC_INC(resource->ref_count);
-	// Insert reference
-	if (resource->references != NULL) {
-		mutex_lock(&resource->references->branch_mutex);
-	}
-
-	ref->next = resource->references;
-	if (resource->references != NULL) {
-		resource->references->prev = ref;
-	}
-	resource->references = ref;
-
-	if (ref->next != NULL) {
-		mutex_unlock(&ref->next->branch_mutex);
-	}
-
-	return ref;
-}
-
-int unrefrence_resource(struct ARC_Reference *reference) {
-	if (reference == NULL || reference->resource == NULL) {
-		ARC_DEBUG(ERR, "Resource is NULL, cannot unreference\n");
-		return EINVAL;
-	}
-
-	struct ARC_Resource *res = reference->resource;
-	struct ARC_Reference *next = reference->next;
-	struct ARC_Reference *prev = reference->prev;
-
-	// Lock effected nodes
-        mutex_lock(&reference->branch_mutex);
-	if (prev != NULL) {
-		mutex_lock(&prev->branch_mutex);
-	}
-	if (next != NULL) {
-		mutex_lock(&next->branch_mutex);
-	}
-
-	ARC_ATOMIC_DEC(res->ref_count);
-
-	// Update links
-	if (prev == NULL) {
-		res->references = next;
-	} else {
-		prev->next = next;
-	}
-
-	if (next != NULL) {
-		next->prev = prev;
-	}
-
-	// Unlock
-	mutex_unlock(&reference->branch_mutex);
-	if (reference->prev != NULL) {
-		mutex_unlock(&reference->prev->branch_mutex);
-	}
-	if (reference->next != NULL) {
-		mutex_unlock(&reference->next->branch_mutex);
-	}
-
-        free(reference);
 
 	return 0;
 }

@@ -40,15 +40,9 @@
 
 struct ARC_Resource {
 	ARC_GenericMutex prop_mutex;
-
-	struct ARC_Reference *references;
-
-	uint64_t ref_count;
-
 	/// State managed by driver, owned by resource.
 	ARC_GenericMutex dri_state_mutex;
 	void *driver_state;
-
 	/// Resource id.
 	uint64_t id;
 	/// Instance.
@@ -61,24 +55,11 @@ struct ARC_Resource {
 	struct ARC_DriverDef *driver;
 };
 
-struct ARC_Reference {
-	// Functions for managing this reference.
-	struct ARC_Resource *resource;
-	// The signal funciton must not be NULL
-	int (*signal)(int code, void *data);
-	int64_t pid;
-	ARC_GenericMutex branch_mutex;
-	struct ARC_Reference *prev;
-	struct ARC_Reference *next;
-};
-
 struct ARC_File {
 	/// Current offset into the file.
 	long offset;
 	/// Pointer to the VFS node.
 	struct ARC_VFSNode *node;
-	/// Reference
-	struct ARC_Reference *reference;
 	/// Reference counter for the decsriptor itself.
 	int ref_count;
 	/// Mode the file was opened with.
@@ -110,26 +91,26 @@ struct ARC_DriverDef {
 	/// Rename the resource.
 	int (*rename)(char *newname, struct ARC_Resource *res);
 	/// Stat the given driver, if filename is NULL return the stat of the current driver, otherwise return the stat of the file at that path.
-	int (*stat)(struct ARC_Resource *res, char *filename, struct stat *stat);
+	/// If a hint is given, it will be used to aid in the look up of the non-NULL filename, and the one after the function returned will be the
+	/// hint to use for the file at filename
+	int (*stat)(struct ARC_Resource *res, char *filename, struct stat *stat, void **hint);
 	/// A function to signal modification of driver parameters.
-	int (*control)(struct ARC_Resource *res, void *buffer, size_t size);
+	void *(*control)(struct ARC_Resource *res, void *buffer, size_t size);
 };
 
 struct ARC_SuperDriverDef {
-	int (*create)(char *path, uint32_t mode, int type);
-	int (*remove)(char *path);
-	int (*link)(char *a, char *b);
-	/// Rename the file.
+	int (*create)(char *path, uint32_t mode, int type, void **hint);
+	/// Remove absolute paths
+	int (*remove)(char *path, void *hint);
+	/// Rename the file (absolute paths).
 	int (*rename)(char *a, char *b);
 	/// Acquire the needed information for initalization of a file resource. The return value should be passed as the argument of the function.
-	void *(*locate)(struct ARC_Resource *res, char *filename);
+	void *(*locate)(struct ARC_Resource *res, char *filename, void *hint);
 };
 // /Driver definitions
 
 struct ARC_Resource *init_resource(uint64_t dri_index, void *args);
 struct ARC_Resource *init_pci_resource(uint16_t vendor, uint16_t device, void *args);
 int uninit_resource(struct ARC_Resource *resource);
-struct ARC_Reference *reference_resource(struct ARC_Resource *resource);
-int unrefrence_resource(struct ARC_Reference *reference);
 
 #endif
