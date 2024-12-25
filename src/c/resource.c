@@ -85,6 +85,7 @@ struct ARC_Resource *init_resource(uint64_t dri_index, void *args) {
 	if (def->init == NULL) {
 		free(resource);
 		ARC_DEBUG(ERR, "Driver does not define an initialization function\n");
+		ARC_ATOMIC_DEC(def->instance_counter);
 
 		return NULL;
 	}
@@ -92,7 +93,11 @@ struct ARC_Resource *init_resource(uint64_t dri_index, void *args) {
 	int ret = def->init(resource, args);
 
 	if (ret != 0) {
+		free(resource);
 		ARC_DEBUG(ERR, "Driver init function returned %d\n", ret);
+		ARC_ATOMIC_DEC(def->instance_counter);
+
+		return NULL;
 	}
 
 	return resource;
