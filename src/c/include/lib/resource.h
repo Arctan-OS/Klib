@@ -68,46 +68,31 @@ struct ARC_File {
 	int flags;
 };
 
-// Driver definitions
 // NOTE: No function pointer in a driver definition
 //       should be NULL.
 struct ARC_DriverDef {
-	// The index of this driver
-	uint64_t index;
-	uint64_t instance_counter;
- 	uint32_t *pci_codes; // Terminates with ARC_DRI_PCI_TERMINATOR if non-NULL
-	char *name_format;
-	// Specific
-	uint64_t identifer;
-	void *driver;
 	// Generic
 	int (*init)(struct ARC_Resource *res, void *args);
 	int (*uninit)(struct ARC_Resource *res);
-	int (*open)(struct ARC_File *file, struct ARC_Resource *res, int flags, uint32_t mode);
-	int (*write)(void *buffer, size_t size, size_t count, struct ARC_File *file, struct ARC_Resource *res);
-	int (*read)(void *buffer, size_t size, size_t count, struct ARC_File *file, struct ARC_Resource *res);
-	int (*close)(struct ARC_File *file, struct ARC_Resource *res);
+	size_t (*write)(void *buffer, size_t size, size_t count, struct ARC_File *file, struct ARC_Resource *res);
+	size_t (*read)(void *buffer, size_t size, size_t count, struct ARC_File *file, struct ARC_Resource *res);
 	int (*seek)(struct ARC_File *file, struct ARC_Resource *res);
 	/// Rename the resource.
-	int (*rename)(char *newname, struct ARC_Resource *res);
+	int (*rename)(char *a, char *b, struct ARC_Resource *res);
 	/// Stat the given driver, if filename is NULL return the stat of the current driver, otherwise return the stat of the file at that path.
 	/// If a hint is given, it will be used to aid in the look up of the non-NULL filename, and the one after the function returned will be the
 	/// hint to use for the file at filename
 	int (*stat)(struct ARC_Resource *res, char *filename, struct stat *stat, void **hint);
 	/// A function to signal modification of driver parameters.
 	void *(*control)(struct ARC_Resource *res, void *buffer, size_t size);
-};
 
-struct ARC_SuperDriverDef {
 	int (*create)(char *path, uint32_t mode, int type, void **hint);
 	/// Remove absolute paths
 	int (*remove)(char *path, void *hint);
-	/// Rename the file (absolute paths).
-	int (*rename)(char *a, char *b);
 	/// Acquire the needed information for initalization of a file resource. The return value should be passed as the argument of the function.
 	void *(*locate)(struct ARC_Resource *res, char *filename, void *hint);
+ 	uint32_t *pci_codes; // Terminates with ARC_DRI_PCI_TERMINATOR if non-NULL
 };
-// /Driver definitions
 
 struct ARC_Resource *init_resource(uint64_t dri_index, void *args);
 struct ARC_Resource *init_pci_resource(uint16_t vendor, uint16_t device, void *args);

@@ -50,7 +50,7 @@ size_t ringbuffer_allocate(struct ARC_Ringbuffer *ringbuffer, int block) {
 }
 
 int ringbuffer_free(struct ARC_Ringbuffer *ringbuffer, size_t idx) {
-	if (ringbuffer == NULL || abs(idx) >= ringbuffer->obj_size) {
+	if (ringbuffer == NULL || idx >= ringbuffer->obj_size) {
 		return -1;
 	}
 

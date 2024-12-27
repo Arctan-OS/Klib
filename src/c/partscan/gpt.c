@@ -146,4 +146,6 @@ int gpt_get_partitions(char *filepath) {
 
 		init_resource(ARC_DRIDEF_PARTITION_DUMMY, &dri_args);
 	}
+
+	return 0;
 }

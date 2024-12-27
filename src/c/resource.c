@@ -72,9 +72,6 @@ struct ARC_Resource *init_resource(uint64_t dri_index, void *args) {
 	struct ARC_DriverDef *def = __DRIVER_LOOKUP_TABLE[dri_index];
 	resource->driver = def;
 
-	resource->instance = ARC_ATOMIC_LOAD(def->instance_counter);
-	ARC_ATOMIC_INC(def->instance_counter);
-
 	if (def == NULL) {
 		free(resource);
 		ARC_DEBUG(ERR, "No driver definition found\n");
@@ -85,7 +82,6 @@ struct ARC_Resource *init_resource(uint64_t dri_index, void *args) {
 	if (def->init == NULL) {
 		free(resource);
 		ARC_DEBUG(ERR, "Driver does not define an initialization function\n");
-		ARC_ATOMIC_DEC(def->instance_counter);
 
 		return NULL;
 	}
@@ -95,7 +91,6 @@ struct ARC_Resource *init_resource(uint64_t dri_index, void *args) {
 	if (ret != 0) {
 		free(resource);
 		ARC_DEBUG(ERR, "Driver init function returned %d\n", ret);
-		ARC_ATOMIC_DEC(def->instance_counter);
 
 		return NULL;
 	}
