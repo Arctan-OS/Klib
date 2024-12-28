@@ -66,7 +66,6 @@ struct ARC_Resource *init_resource(uint64_t dri_index, void *args) {
 	ARC_ATOMIC_INC(current_id);
 
 	resource->dri_index = dri_index;
-	init_static_mutex(&resource->dri_state_mutex);
 
 	// Fetch and set the appropriate definition
 	struct ARC_DriverDef *def = __DRIVER_LOOKUP_TABLE[dri_index];

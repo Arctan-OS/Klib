@@ -49,14 +49,14 @@ typedef int ARC_GenericMutex;
  * Queue lock structure
  * */
 struct ARC_TicketLock {
-	/// Synchronization lock for the queue
-	ARC_GenericMutex lock;
 	/// Pointer to the current owner of the lock
 	void *next;
 	/// Pointer to the last element in the queue
 	void *last;
 	/// Next ticket
 	uint64_t next_ticket;
+	/// Synchronization lock for the queue
+	ARC_GenericMutex lock;
 	bool is_frozen;
 };
 

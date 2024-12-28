@@ -32,27 +32,18 @@
 #include <sys/stat.h>
 #include <lib/atomics.h>
 
-#define ARC_DRIVER_IDEN_SUPER 0x5245505553 // "SUPER" little endian
-#define ARC_SIGREF_CLOSE 0xA
-
 #define ARC_REGISTER_DRIVER(group, name, ext) \
 	struct ARC_DriverDef __driver_##name##_##ext
 
 struct ARC_Resource {
-	ARC_GenericMutex prop_mutex;
-	/// State managed by driver, owned by resource.
-	ARC_GenericMutex dri_state_mutex;
-	void *driver_state;
-	/// Resource id.
+	/// ID
 	uint64_t id;
-	/// Instance.
-	uint64_t instance;
-	/// Driver function group (supplied on init by caller).
-	int dri_group;
 	/// Specific driver function set (supplied on init by caller).
 	uint64_t dri_index;
 	/// Driver functions.
 	struct ARC_DriverDef *driver;
+	/// State managed by driver, owned by resource.
+	void *driver_state;
 };
 
 struct ARC_File {
@@ -71,26 +62,17 @@ struct ARC_File {
 // NOTE: No function pointer in a driver definition
 //       should be NULL.
 struct ARC_DriverDef {
-	// Generic
 	int (*init)(struct ARC_Resource *res, void *args);
 	int (*uninit)(struct ARC_Resource *res);
 	size_t (*write)(void *buffer, size_t size, size_t count, struct ARC_File *file, struct ARC_Resource *res);
 	size_t (*read)(void *buffer, size_t size, size_t count, struct ARC_File *file, struct ARC_Resource *res);
 	int (*seek)(struct ARC_File *file, struct ARC_Resource *res);
-	/// Rename the resource.
 	int (*rename)(char *a, char *b, struct ARC_Resource *res);
-	/// Stat the given driver, if filename is NULL return the stat of the current driver, otherwise return the stat of the file at that path.
-	/// If a hint is given, it will be used to aid in the look up of the non-NULL filename, and the one after the function returned will be the
-	/// hint to use for the file at filename
-	int (*stat)(struct ARC_Resource *res, char *filename, struct stat *stat, void **hint);
-	/// A function to signal modification of driver parameters.
+	int (*stat)(struct ARC_Resource *res, char *path, struct stat *stat);
 	void *(*control)(struct ARC_Resource *res, void *buffer, size_t size);
-
-	int (*create)(char *path, uint32_t mode, int type, void **hint);
-	/// Remove absolute paths
-	int (*remove)(char *path, void *hint);
-	/// Acquire the needed information for initalization of a file resource. The return value should be passed as the argument of the function.
-	void *(*locate)(struct ARC_Resource *res, char *filename, void *hint);
+	int (*create)(char *path, uint32_t mode, int type);
+	int (*remove)(char *path);
+	void *(*locate)(struct ARC_Resource *res, char *path);
  	uint32_t *pci_codes; // Terminates with ARC_DRI_PCI_TERMINATOR if non-NULL
 };
 

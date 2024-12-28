@@ -31,7 +31,7 @@
 #include <lib/checksums.h>
 #include <mm/allocator.h>
 #include <drivers/dri_defs.h>
-#include <drivers/dev/partition_dummy.h>
+#include <drivers/sysdev/partition_dummy.h>
 #include <global.h>
 
 #define GPT_HEADER_SIG 0x5452415020494645ULL // Little endian
