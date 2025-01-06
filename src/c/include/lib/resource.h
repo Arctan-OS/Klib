@@ -52,11 +52,9 @@ struct ARC_File {
 	/// Pointer to the VFS node.
 	struct ARC_VFSNode *node;
 	/// Reference counter for the decsriptor itself.
-	int ref_count;
+	uint32_t ref_count;
 	/// Mode the file was opened with.
 	uint32_t mode;
-	/// Flags the file was opened with.
-	int flags;
 };
 
 // NOTE: No function pointer in a driver definition
