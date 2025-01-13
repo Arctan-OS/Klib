@@ -68,8 +68,8 @@ struct ARC_DriverDef {
 	int (*rename)(char *a, char *b, struct ARC_Resource *res);
 	int (*stat)(struct ARC_Resource *res, char *path, struct stat *stat);
 	void *(*control)(struct ARC_Resource *res, void *buffer, size_t size);
-	int (*create)(char *path, uint32_t mode, int type);
-	int (*remove)(char *path);
+	int (*create)(struct ARC_Resource *res, char *path, uint32_t mode, int type);
+	int (*remove)(struct ARC_Resource *res, char *path);
 	void *(*locate)(struct ARC_Resource *res, char *path);
  	uint32_t *pci_codes; // Terminates with ARC_DRI_PCI_TERMINATOR if non-NULL
 };
