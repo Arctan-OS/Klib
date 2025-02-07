@@ -27,7 +27,7 @@
 #include <mm/allocator.h>
 #include <lib/atomics.h>
 #include <lib/util.h>
-#include <mp/sched/abstract.h>
+#include <mp/scheduler.h>
 #include <global.h>
 #include <arch/smp.h>
 
@@ -92,7 +92,7 @@ void *ticket_lock(struct ARC_TicketLock *head) {
 
 	ticket->ticket = head->next_ticket++;
 	ticket->parent = head;
-	ticket->tid = get_current_tid();
+	ticket->tid = sched_get_current_tid();
 	ticket->next = NULL;
 
 	if (last != NULL) {
@@ -122,7 +122,7 @@ void ticket_lock_yield(void *ticket) {
 	}
 
 	while (current->ticket != wait_for->ticket) {
-		yield_cpu(current->tid);
+		sched_yield_cpu(current->tid);
 		current = (struct internal_ticket_lock_node *)wait_for->parent->next;
 	}
 }
