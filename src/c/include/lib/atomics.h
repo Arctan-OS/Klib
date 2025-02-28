@@ -40,6 +40,9 @@
 #define ARC_ATOMIC_STORE(__dest, __val) __atomic_store_n(&__dest, __val, __ATOMIC_ACQUIRE);
 #define ARC_ATOMIC_XCHG(__mem, __val, __ret) __atomic_exchange(__mem, __val, __ret, __ATOMIC_ACQUIRE)
 #define ARC_ATOMIC_CMPXCHG(__ptr, __expected, __desired) __atomic_compare_exchange_n(__ptr, __expected, __desired, 0, __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE)
+#define ARC_ATOMIC_LFENCE __asm__("lfence" :::);
+#define ARC_ATOMIC_SFENCE __asm__("sfence" :::);
+#define ARC_ATOMIC_MFENCE __asm__("mfence" :::);
 
 /// Generic spinlock
 typedef int ARC_GenericSpinlock;
