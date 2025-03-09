@@ -30,6 +30,6 @@
 #include <arch/thread.h>
 #include <loaders/elf.h>
 
-int sysv_prepare_process_stack(struct ARC_Thread *stack_top, struct ARC_ELFMeta *meta, char **env, int envc, char **argv, int argc);
+uint64_t *sysv_prepare_entry_stack(uint64_t *stack_top, struct ARC_ELFMeta *meta, char **env, int envc, char **argv, int argc);
 
 #endif

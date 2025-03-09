@@ -24,7 +24,7 @@
  *
  * @DESCRIPTION
 */
-#include "global.h"
+#include <global.h>
 #include <lib/convention/sysv.h>
 #include <lib/util.h>
 
@@ -43,44 +43,69 @@
 #define AT_INTP_DEVICE 12
 #define AT_INTP_INODE 13
 
-static uint64_t *sysv_insert_auxvec(uint64_t type, uint64_t data) {
+#define STACK_PUSH(__rsp, __val) __rsp -= 8; __rsp[0] = __val;
 
-}
-
-int sysv_prepare_process_stack(struct ARC_Thread *thread, struct ARC_ELFMeta *meta, char **env, int envc, char **argv, int argc) {
-        if (thread == NULL) {
-                return -1;
-        }
-
-        uint64_t *rsp = (uint64_t *)thread->ctx.rsp;
+uint64_t *sysv_prepare_entry_stack(uint64_t *stack_top, struct ARC_ELFMeta *meta, char **env, int envc, char **argv, int argc) {
+        uint64_t *rsp = (uint64_t *)stack_top;
 
         if (rsp == NULL) {
-                return -2;
+                return NULL;
         }
 
-        for (int i = 0; i < envc; i++) {
-                size_t size = strlen(env[i]);
-
-                rsp -= size + 2;
-                memcpy(rsp, env[i], size + 1);
-        }
-
-        for (int i = 0; i < argc; i++) {
-                size_t size = strlen(argv[i]);
-
-                rsp -= size + 2;
-                memcpy(rsp, argv[i], size + 1);
-        }
-
-        rsp = (uint64_t *)ALIGN((uintptr_t)rsp, 16);
-        rsp -= 16;
-
-        rsp = sysv_insert_auxvec(AT_ENTRY, (uint64_t)meta->entry);
-        rsp = sysv_insert_auxvec(AT_PHDR, (uint64_t)meta->phdr);
-        rsp = sysv_insert_auxvec(AT_PHENT, (uint64_t)meta->phent);
-        rsp = sysv_insert_auxvec(AT_PHNUM, (uint64_t)meta->phnum);
-
+        // Push ENV
+        uint64_t *rbp_env = rsp;
         
+        for (int i = envc - 1; i >= 0; i--) {
+                size_t off = strlen(env[i]);
 
-        return 0;
+                rsp -= off + 2;
+                memcpy(rsp, &env[i], off);
+                rsp[off] = 0;
+        }
+
+
+        // Push ARG
+        uint64_t *rbp_arg = rsp;
+
+        for (int i = argc - 1; i >= 0; i--) {
+                size_t off = strlen(argv[i]);
+
+                rsp -= off + 2;
+                memcpy(rsp, &argv[i], off);
+                rsp[off] = 0;
+        }
+
+        // Push vectors
+        STACK_PUSH(rsp, 0);
+        STACK_PUSH(rsp, 0);
+
+        STACK_PUSH(rsp, (uint64_t)meta->entry);
+        STACK_PUSH(rsp, AT_ENTRY);
+
+        // Pad
+        STACK_PUSH(rsp, 0);
+
+        // Push ENV ptrs
+        for (int i = envc - 1; i >= 0; i--) {
+                size_t off = strlen(env[i]);
+
+                rbp_env -= off + 2;
+                STACK_PUSH(rsp, (uintptr_t)rbp_env);
+        }
+
+        // Pad
+        STACK_PUSH(rsp, 0);
+
+        // Push ARG ptrs
+        for (int i = envc - 1; i >= 0; i--) {
+                size_t off = strlen(argv[i]);
+
+                rbp_arg -= off + 2;
+                STACK_PUSH(rsp, (uintptr_t)rbp_arg);
+        }
+
+        // Push argc
+        STACK_PUSH(rsp, argc);
+
+        return rsp;
 }
