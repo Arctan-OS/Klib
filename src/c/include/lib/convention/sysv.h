@@ -27,9 +27,9 @@
 #ifndef ARC_LIB_CONVENTION_SYSV_H
 #define ARC_LIB_CONVENTION_SYSV_H
 
-#include <arch/thread.h>
 #include <loaders/elf.h>
+#include <stddef.h>
 
-uint64_t *sysv_prepare_entry_stack(uint64_t *stack_top, struct ARC_ELFMeta *meta, char **env, int envc, char **argv, int argc);
+uintptr_t sysv_prepare_entry_stack(uint64_t *stack_top, struct ARC_ELFMeta *meta, char **env, int envc, char **argv, int argc);
 
 #endif

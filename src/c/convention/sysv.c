@@ -27,6 +27,7 @@
 #include <global.h>
 #include <lib/convention/sysv.h>
 #include <lib/util.h>
+#include <stdint.h>
 
 #define AT_NULL 0
 #define AT_IGNORE 1
@@ -45,11 +46,11 @@
 
 #define STACK_PUSH(__rsp, __val) __rsp -= 8; __rsp[0] = __val;
 
-uint64_t *sysv_prepare_entry_stack(uint64_t *stack_top, struct ARC_ELFMeta *meta, char **env, int envc, char **argv, int argc) {
+uintptr_t sysv_prepare_entry_stack(uint64_t *stack_top, struct ARC_ELFMeta *meta, char **env, int envc, char **argv, int argc) {
         uint64_t *rsp = (uint64_t *)stack_top;
 
         if (rsp == NULL) {
-                return NULL;
+                return 0;
         }
 
         // Push ENV
@@ -62,7 +63,6 @@ uint64_t *sysv_prepare_entry_stack(uint64_t *stack_top, struct ARC_ELFMeta *meta
                 memcpy(rsp, &env[i], off);
                 rsp[off] = 0;
         }
-
 
         // Push ARG
         uint64_t *rbp_arg = rsp;
@@ -107,5 +107,5 @@ uint64_t *sysv_prepare_entry_stack(uint64_t *stack_top, struct ARC_ELFMeta *meta
         // Push argc
         STACK_PUSH(rsp, argc);
 
-        return rsp;
+        return ((uintptr_t)stack_top - (uintptr_t)rsp);
 }
