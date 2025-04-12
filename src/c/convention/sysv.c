@@ -97,7 +97,7 @@ uintptr_t sysv_prepare_entry_stack(uint64_t *stack_top, struct ARC_ELFMeta *meta
         STACK_PUSH(rsp, 0);
 
         // Push ARG ptrs
-        for (int i = envc - 1; i >= 0; i--) {
+        for (int i = argc - 1; i >= 0; i--) {
                 size_t off = strlen(argv[i]);
 
                 rbp_arg -= off + 2;
