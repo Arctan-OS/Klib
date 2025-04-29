@@ -33,7 +33,7 @@
 #include <lib/atomics.h>
 
 #define ARC_REGISTER_DRIVER(group, name, ext) \
-	struct ARC_DriverDef __driver_##name##_##ext
+	struct ARC_DriverDef _driver_##name##_##ext
 
 struct ARC_Resource {
 	/// ID
@@ -72,10 +72,12 @@ struct ARC_DriverDef {
 	int (*remove)(struct ARC_Resource *res, char *path);
 	void *(*locate)(struct ARC_Resource *res, char *path);
  	uint32_t *pci_codes; // Terminates with ARC_DRI_PCI_TERMINATOR if non-NULL
+	uint64_t *acpi_codes; // Terminates with ARC_DRI_ACPI_TERMINATOR if non-NULL
 };
 
 struct ARC_Resource *init_resource(uint64_t dri_index, void *args);
 struct ARC_Resource *init_pci_resource(uint16_t vendor, uint16_t device, void *args);
+struct ARC_Resource *init_acpi_resource(uint64_t hid_hash, void *args);
 int uninit_resource(struct ARC_Resource *resource);
 
 #endif

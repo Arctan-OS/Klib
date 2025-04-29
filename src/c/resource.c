@@ -68,7 +68,7 @@ struct ARC_Resource *init_resource(uint64_t dri_index, void *args) {
 	resource->dri_index = dri_index;
 
 	// Fetch and set the appropriate definition
-	struct ARC_DriverDef *def = __DRIVER_LOOKUP_TABLE[dri_index];
+	struct ARC_DriverDef *def = _DRIVER_LOOKUP_TABLE[dri_index];
 	resource->driver = def;
 
 	if (def == NULL) {
@@ -97,11 +97,11 @@ struct ARC_Resource *init_resource(uint64_t dri_index, void *args) {
 	return resource;
 }
 
-uint64_t get_dri_def_pci(uint16_t vendor, uint16_t device) {
+static uint64_t get_dri_def_pci(uint16_t vendor, uint16_t device) {
 	uint32_t target = (vendor << 16) | device;
 
 	for (uint64_t i = 0; i < ARC_DRIDEF_COUNT; i++) {
-		struct ARC_DriverDef *def = __DRIVER_LOOKUP_TABLE[i];
+		struct ARC_DriverDef *def = _DRIVER_LOOKUP_TABLE[i];
 
 		if (def->pci_codes == NULL) {
 			continue;
@@ -128,6 +128,37 @@ struct ARC_Resource *init_pci_resource(uint16_t vendor, uint16_t device, void *a
 	ARC_DEBUG(INFO, "Initializing PCI resource 0x%04x:0x%04x\n", vendor, device);
 
 	return init_resource(get_dri_def_pci(vendor, device), args);
+}
+
+static uint64_t get_dri_def_acpi(uint64_t hid_hash) {
+	for (uint64_t i = 0; i < ARC_DRIDEF_COUNT; i++) {
+		struct ARC_DriverDef *def = _DRIVER_LOOKUP_TABLE[i];
+
+		if (def->acpi_codes == NULL) {
+			continue;
+		}
+
+		for (uint32_t code = 0;; code++) {
+			if (def->acpi_codes[code] == ARC_DRIDEF_ACPI_TERMINATOR) {
+				break;
+			} else if (def->acpi_codes[code] == hid_hash) {
+				return i;
+			}
+		}
+	}
+
+	return (uint64_t)-1;
+}
+
+struct ARC_Resource *init_acpi_resource(uint64_t hid_hash, void *args) {
+	if (hid_hash == 0) {
+		ARC_DEBUG(WARN, "Skipping ACPI resource initialization\n");
+		return NULL;
+	}
+
+	ARC_DEBUG(INFO, "Initializing ACPI resource (%"PRIX64")\n", hid_hash);
+
+	return init_resource(get_dri_def_acpi(hid_hash), args);
 }
 
 int uninit_resource(struct ARC_Resource *resource) {
