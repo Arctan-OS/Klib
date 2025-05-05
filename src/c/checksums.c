@@ -50,6 +50,8 @@ static int checksum_gen_crc32_table() {
 		i >>= 1;
 	} while (i > 0);
 
+	ARC_DEBUG(INFO, "Generated CRC32 table\n");
+
 	return 0;
 }
 
@@ -70,6 +72,8 @@ uint32_t checksum_crc32(uint8_t *data, size_t length) {
 
 int init_checksums() {
 	checksum_gen_crc32_table();
+
+	ARC_DEBUG(INFO, "Initialized checksums\n");
 
 	return 0;
 }
