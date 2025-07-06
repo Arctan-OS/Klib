@@ -91,6 +91,17 @@ void memcpy(void *a, void *b, size_t size) {
 	}
 }
 
+int nmemcpy(void *a, void *b, size_t size) {
+	size_t i = size - 1;
+	while (i > 0) {
+		*(uint8_t *)(a + i) = *(uint8_t *)(b + i);
+		i--;
+	}
+	*(uint8_t *)(a) = *(uint8_t *)(b);
+
+	return 0;
+}
+
 size_t strlen(char *a) {
 	if (a == NULL) {
 		return 0;
