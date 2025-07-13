@@ -32,12 +32,10 @@
 #include <stdint.h>
 
 #define ARC_MEM_BARRIER __asm__("" ::: "memory");
-// TODO: Fences
-
 #define ARC_ATOMIC_INC(__val) __atomic_add_fetch(&__val, 1, __ATOMIC_ACQUIRE);
 #define ARC_ATOMIC_DEC(__val) __atomic_sub_fetch(&__val, 1, __ATOMIC_ACQUIRE);
 #define ARC_ATOMIC_LOAD(__val) __atomic_load_n(&__val, __ATOMIC_ACQUIRE);
-#define ARC_ATOMIC_STORE(__dest, __val) __atomic_store_n(&__dest, __val, __ATOMIC_ACQUIRE);
+#define ARC_ATOMIC_STORE(__dest, __val) __atomic_store_n(&__dest, __val, __ATOMIC_RELEASE);
 #define ARC_ATOMIC_XCHG(__mem, __val, __ret) __atomic_exchange(__mem, __val, __ret, __ATOMIC_ACQUIRE)
 #define ARC_ATOMIC_CMPXCHG(__ptr, __expected, __desired) __atomic_compare_exchange_n(__ptr, __expected, __desired, 0, __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE)
 #define ARC_ATOMIC_LFENCE __asm__("lfence" :::);
