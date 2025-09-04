@@ -27,7 +27,6 @@
 #include <lib/partscan/partscan.h>
 #include <lib/partscan/gpt.h>
 #include <fs/vfs.h>
-#include <lib/perms.h>
 
 int partscan_enumerate_partitions(char *filepath) {
 	if (filepath == NULL) {

@@ -29,7 +29,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include <lib/atomics.h>
+#include <lib/mutex.h>
 
 struct ARC_Ringbuffer {
 	void *base; // The start of the buffer
@@ -37,7 +37,7 @@ struct ARC_Ringbuffer {
 	size_t obj_size; // Size of each object
 	size_t idx; // The current 0-based index of the next free object
 	size_t data_tail;
-	ARC_GenericMutex lock;
+	ARC_Mutex lock;
 };
 
 size_t ringbuffer_allocate(struct ARC_Ringbuffer *ringbuffer, int block);

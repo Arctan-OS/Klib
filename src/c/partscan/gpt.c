@@ -27,7 +27,6 @@
 #include <lib/partscan/gpt.h>
 #include <abi-bits/seek-whence.h>
 #include <fs/vfs.h>
-#include <lib/perms.h>
 #include <lib/checksums.h>
 #include <mm/allocator.h>
 #include <drivers/dri_defs.h>
