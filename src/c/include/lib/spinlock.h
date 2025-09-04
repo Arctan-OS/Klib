@@ -1,5 +1,5 @@
 /**
- * @file atomics.c
+ * @file spinlock.h
  *
  * @author awewsomegamer <awewsomegamer@gmail.com>
  *
@@ -24,10 +24,16 @@
  *
  * @DESCRIPTION
 */
-#include <mm/allocator.h>
-#include <lib/atomics.h>
-#include <lib/util.h>
-#include <mp/scheduler.h>
-#include <global.h>
-#include <arch/smp.h>
+#ifndef ARC_LIB_SPINLOCK_H
+#define ARC_LIB_SPINLOCK_H
 
+/// Generic spinlock
+typedef int ARC_Spinlock;
+
+int init_spinlock(ARC_Spinlock **spinlock);
+int uninit_spinlock(ARC_Spinlock *spinlock);
+int init_static_spinlock(ARC_Spinlock *spinlock);
+int spinlock_lock(ARC_Spinlock *spinlock);
+int spinlock_unlock(ARC_Spinlock *spinlock);
+
+#endif

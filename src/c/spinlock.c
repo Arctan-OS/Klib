@@ -1,5 +1,5 @@
 /**
- * @file atomics.c
+ * @file spinlock.c
  *
  * @author awewsomegamer <awewsomegamer@gmail.com>
  *
@@ -24,10 +24,58 @@
  *
  * @DESCRIPTION
 */
-#include <mm/allocator.h>
-#include <lib/atomics.h>
-#include <lib/util.h>
-#include <mp/scheduler.h>
-#include <global.h>
-#include <arch/smp.h>
+#include "lib/spinlock.h"
+#include "lib/util.h"
+#include "mm/allocator.h"
 
+int init_spinlock(ARC_Spinlock **spinlock) {
+	if (spinlock == NULL) {
+		return 1;
+	}
+
+	*spinlock = (ARC_Spinlock *)alloc(sizeof(**spinlock));
+
+	if (*spinlock == NULL) {
+		return 1;
+	}
+
+	memset(*spinlock, 0, sizeof(**spinlock));
+
+	return 0;
+}
+
+int uninit_spinlock(ARC_Spinlock *spinlock) {
+	free(spinlock);
+
+	return 0;
+}
+
+int init_static_spinlock(ARC_Spinlock *spinlock) {
+	if (spinlock == NULL) {
+		return 1;
+	}
+
+	memset(spinlock, 0, sizeof(ARC_Spinlock));
+
+	return 0;
+}
+
+int spinlock_lock(ARC_Spinlock *spinlock) {
+	if (spinlock == NULL) {
+		return 1;
+	}
+
+	while (__atomic_test_and_set(spinlock, __ATOMIC_ACQUIRE));
+
+	return 0;
+}
+
+int spinlock_unlock(ARC_Spinlock *spinlock) {
+	if (spinlock == NULL) {
+		return 1;
+	}
+
+	__atomic_clear(spinlock, __ATOMIC_RELEASE);
+
+	return 0;
+}
