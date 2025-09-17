@@ -91,7 +91,8 @@ void *ticket_lock(struct ARC_TicketLock *head) {
 
 	ticket->ticket = head->next_ticket++;
 	ticket->parent = head;
-	ticket->tid = sched_get_current_tid();
+	ARC_Thread *current = sched_current_thread();
+	ticket->tid = current->tid;
 	ticket->next = NULL;
 
 	if (last != NULL) {

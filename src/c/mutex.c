@@ -73,10 +73,10 @@ int mutex_lock(ARC_Mutex *mutex) {
 		//       the core spins a little to see if it can lock it
 		//       before yielding to the thread that currently owns
 		//       the mutex
-		sched_yield_to(mutex->wake);
+		sched_yield(mutex->wake);
 	}
 
-	mutex->wake = sched_get_current_thread();
+	mutex->wake = sched_current_thread();
 
 	return 0;
 }
@@ -133,7 +133,7 @@ int list_mutex_lock(ARC_ListMutex *mutex, ARC_ListMutexElement *elem) {
 	// Save interrupt flag
 
 	ARC_DISABLE_INTERRUPT;
-	elem->wake = sched_get_current_thread();
+	elem->wake = sched_current_thread();
 	ARC_ListMutexElement *_elem = elem;
 	ARC_ListMutexElement *t = NULL;
 	ARC_ATOMIC_XCHG(&mutex->last, &_elem, &t);
@@ -149,7 +149,7 @@ int list_mutex_lock(ARC_ListMutex *mutex, ARC_ListMutexElement *elem) {
 			return -1;
 		}
 
-		sched_yield_to(mutex->current->wake);
+		sched_yield(mutex->current->wake);
 	}
 
 	// Return interrupt flag to original state
