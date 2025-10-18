@@ -27,8 +27,14 @@
 #ifndef ARC_LIB_SPINLOCK_H
 #define ARC_LIB_SPINLOCK_H
 
+#include <stdbool.h>
+#include <stdint.h>
+
 /// Generic spinlock
-typedef int ARC_Spinlock;
+typedef struct ARC_Spinlock {
+        uint32_t lock;
+        bool interrupts;
+} ARC_Spinlock;
 
 int init_spinlock(ARC_Spinlock **spinlock);
 int uninit_spinlock(ARC_Spinlock *spinlock);

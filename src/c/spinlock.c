@@ -25,6 +25,8 @@
  * @DESCRIPTION
 */
 #include "lib/spinlock.h"
+#include "arch/info.h"
+#include "util.h"
 #include "lib/util.h"
 #include "mm/allocator.h"
 
@@ -65,7 +67,9 @@ int spinlock_lock(ARC_Spinlock *spinlock) {
 		return 1;
 	}
 
-	while (__atomic_test_and_set(spinlock, __ATOMIC_ACQUIRE));
+	while (__atomic_test_and_set(&spinlock->lock, __ATOMIC_ACQUIRE));
+	spinlock->interrupts = arch_interrupts_enabled();
+	ARC_DISABLE_INTERRUPT;
 
 	return 0;
 }
@@ -75,7 +79,11 @@ int spinlock_unlock(ARC_Spinlock *spinlock) {
 		return 1;
 	}
 
-	__atomic_clear(spinlock, __ATOMIC_RELEASE);
+	__atomic_clear(&spinlock->lock, __ATOMIC_RELEASE);
+
+	if (spinlock->interrupts) {
+		ARC_ENABLE_INTERRUPT;
+	}
 
 	return 0;
 }
