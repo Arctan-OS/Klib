@@ -24,17 +24,140 @@
  *
  * @DESCRIPTION
 */
+#include "lib/atomics.h"
 #include "lib/graph/base.h"
+#include "lib/util.h"
+#include "mm/allocator.h"
+
 #include <stddef.h>
 
+ARC_GraphNode *graph_create(size_t arb_size) {
+        ARC_GraphNode *node = alloc(sizeof(*node) + arb_size);
+
+        if (node == NULL) {
+                return NULL;
+        }
+
+        memset(node, 0, sizeof(*node) + arb_size);
+
+        node->arb_size = arb_size;
+
+        return node;
+}
+
 int graph_add(ARC_GraphNode *parent, ARC_GraphNode *node) {
+        if (parent == NULL || node == NULL) {
+                return -1;
+        }
+
+        ARC_ATOMIC_XCHG(&parent->child, &node, &node->next);
+        ARC_ATOMIC_INC(parent->child_count);
+        ARC_ATOMIC_INC(parent->ref_count);
+
         return 0;
 }
 
-int graph_remove(ARC_GraphNode *node) {
+static int graph_recursive_free(ARC_GraphNode *node) {
+        if (node->ref_count > 0) {
+                return -1;
+        }
+
+        int r = 0;
+
+        ARC_GraphNode *current = ARC_ATOMIC_LOAD(node->child);
+        while (current != NULL) {
+                r += graph_recursive_free(current);
+                current = ARC_ATOMIC_LOAD(current->next);
+        }
+
+        if (r == 0) {
+                free(node);
+        }
+
+        return r;
+}
+
+int graph_remove(ARC_GraphNode *node, bool free) {
+        if (node == NULL) {
+                return -1;
+        }
+
+        ARC_GraphNode *parent = node->parent;
+
+        if (parent != NULL) {
+                ARC_ATOMIC_XCHG(&parent->child, &node->next, &node->next);
+                ARC_ATOMIC_DEC(parent->child_count);
+                ARC_ATOMIC_DEC(parent->ref_count);
+                // node->next = node; If not, something went wrong
+        }
+
+        if (free && graph_recursive_free(node) != 0) {
+                return -2;
+        }
+
         return 0;
 }
 
-ARC_GraphNode *init_any_graph() {
+ARC_GraphNode *graph_find(ARC_GraphNode *parent, char *targ) {
+        if (parent == NULL || targ == NULL) {
+                return NULL;
+        }
+
+        full_recheck:;
+        ARC_ATOMIC_INC(parent->ref_count);
+        size_t a = ARC_ATOMIC_LOAD(parent->child_count);
+
+        ARC_GraphNode *current = ARC_ATOMIC_LOAD(parent->child);
+        ARC_ATOMIC_INC(current->ref_count);
+        while (current != NULL && strcmp(targ, current->name) != 0) {
+                ARC_GraphNode *t = current;
+                current = ARC_ATOMIC_LOAD(current->next);
+                ARC_ATOMIC_DEC(t->ref_count);
+                ARC_ATOMIC_INC(current->ref_count);
+        }
+
+        size_t b = ARC_ATOMIC_LOAD(parent->child_count);
+
+        if (current != NULL) {
+                ARC_ATOMIC_DEC(parent->ref_count);
+                return current;
+        }
+
+        ARC_ATOMIC_DEC(current->ref_count);
+
+        size_t delta = b - a;
+
+        if (a > b) {
+                // Nodes have been removed, potentially added, recheck every node
+                goto full_recheck;
+        } else if (a == b) {
+                // Check the current child node, most likely one node was removed and
+                // potentially the target node added
+                delta = 1;
+        } else {
+                // Nodes have been added, recheck delta
+        }
+
+        current = ARC_ATOMIC_LOAD(parent->child);
+        ARC_ATOMIC_INC(current->ref_count);
+        int r = -1;
+        while (current != NULL && (r = strcmp(targ, current->name)) != 0 && delta > 0) {
+                ARC_GraphNode *t = current;
+                current = ARC_ATOMIC_LOAD(current->next);
+                ARC_ATOMIC_DEC(t->ref_count);
+                ARC_ATOMIC_INC(current->ref_count);
+                delta--;
+        }
+
+        ARC_ATOMIC_DEC(parent->ref_count);
+
+        if (r == 0) {
+                return current;
+        }
+
         return NULL;
+}
+
+ARC_GraphNode *init_base_graph(size_t arb_size) {
+        return graph_create(arb_size);
 }

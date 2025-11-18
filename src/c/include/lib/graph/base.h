@@ -27,19 +27,24 @@
 #ifndef ARC_LIB_GRAPH_BASE_H
 #define ARC_LIB_GRAPH_BASE_H
 
+#include <stdbool.h>
 #include <stdint.h>
+#include <stddef.h>
 
 typedef struct ARC_GraphNode {
         struct ARC_GraphNode *next;
         struct ARC_GraphNode *child;
         struct ARC_GraphNode *parent;
         char *name;
+        size_t arb_size;
+        size_t ref_count;
+        size_t child_count;
         uint8_t arb[];
 } ARC_GraphNode;
 
 int graph_add(ARC_GraphNode *parent, ARC_GraphNode *node);
-int graph_remove(ARC_GraphNode *node);
-
+int graph_remove(ARC_GraphNode *node, bool free);
+ARC_GraphNode *graph_find(ARC_GraphNode *parent, char *targ);
 ARC_GraphNode *init_any_graph();
 
 #endif
