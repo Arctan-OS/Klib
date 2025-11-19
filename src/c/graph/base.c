@@ -50,6 +50,7 @@ int graph_add(ARC_GraphNode *parent, ARC_GraphNode *node) {
                 return -1;
         }
 
+        node->parent = parent;
         ARC_ATOMIC_XCHG(&parent->child, &node, &node->next);
         ARC_ATOMIC_INC(parent->child_count);
 
@@ -83,6 +84,12 @@ int graph_remove(ARC_GraphNode *node, bool free) {
                 return -1;
         }
 
+        int rc = ARC_ATOMIC_LOAD(node->ref_count);
+
+        if (rc > 0) {
+                return -2;
+        }
+
         ARC_GraphNode *parent = node->parent;
 
         if (parent != NULL) {
@@ -92,7 +99,7 @@ int graph_remove(ARC_GraphNode *node, bool free) {
         }
 
         if (free && graph_recursive_free(node) != 0) {
-                return -2;
+                return -3;
         }
 
         return 0;
