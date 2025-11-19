@@ -29,8 +29,10 @@
 
 #include "lib/graph/base.h"
 
-char *path_collapse(char *path);
+#include <stddef.h>
+
+char *path_collapse(char *_path);
 char *path_get(ARC_GraphNode *node);
-ARC_GraphNode *path_traverse(char *path);
+ARC_GraphNode *path_traverse(ARC_GraphNode *start, char *path);
 
 #endif
