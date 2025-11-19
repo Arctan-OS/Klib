@@ -36,6 +36,7 @@ int strncmp(char *a, char *b, size_t len);
 void memset(void *a, uint8_t value, size_t size);
 void memcpy(void *a, void *b, size_t size);
 int nmemcpy(void *a, void *b, size_t size);
+int strcpy(char *dest, char *src);
 size_t strlen(char *a);
 char *strdup(char *a);
 char *strndup(char *a, size_t n);

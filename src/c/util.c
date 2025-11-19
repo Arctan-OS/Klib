@@ -44,7 +44,7 @@ int strcmp(char *a, char *b) {
 	}
 
 	size_t i = 0;
-	for (; i < max - 1; i++) {
+	for (; i < max; i++) {
 		if (ua[i] != ub[i] || ua[i] == 0 || ub[i] == 0) {
 			break;
 		}
@@ -98,6 +98,20 @@ int nmemcpy(void *a, void *b, size_t size) {
 		i--;
 	}
 	*(uint8_t *)(a) = *(uint8_t *)(b);
+
+	return 0;
+}
+
+int strcpy(char *dest, char *src) {
+	if (dest == NULL || src == NULL) {
+		return -1;
+	}
+
+	while (*src) {
+		*dest = *src;
+		dest++;
+		src++;
+	}
 
 	return 0;
 }
