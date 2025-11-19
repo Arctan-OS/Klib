@@ -31,6 +31,8 @@
 
 #include <stddef.h>
 
+static const char *graph_empty_name = "";
+
 ARC_GraphNode *graph_create(size_t arb_size) {
         ARC_GraphNode *node = alloc(sizeof(*node) + arb_size);
 
@@ -45,10 +47,19 @@ ARC_GraphNode *graph_create(size_t arb_size) {
         return node;
 }
 
-int graph_add(ARC_GraphNode *parent, ARC_GraphNode *node) {
+int graph_add(ARC_GraphNode *parent, ARC_GraphNode *node, char *_name) {
         if (parent == NULL || node == NULL) {
                 return -1;
         }
+
+        char *name = graph_empty_name;
+        if (_name != NULL) {
+                name = strdup(_name);
+        } else if (node->name != NULL) {
+                name = node->name;
+        }
+
+        node->name = name;
 
         node->parent = parent;
         ARC_ATOMIC_XCHG(&parent->child, &node, &node->next);
@@ -73,6 +84,9 @@ static int graph_recursive_free(ARC_GraphNode *node) {
         }
 
         if (r == 0) {
+                if (node->name != graph_empty_name) {
+                        free(node->name);
+                }
                 free(node);
         }
 

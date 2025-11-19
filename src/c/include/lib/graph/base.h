@@ -42,7 +42,8 @@ typedef struct ARC_GraphNode {
         uint8_t arb[];
 } ARC_GraphNode;
 
-int graph_add(ARC_GraphNode *parent, ARC_GraphNode *node);
+ARC_GraphNode *graph_create(size_t arb_size);
+int graph_add(ARC_GraphNode *parent, ARC_GraphNode *node, char *_name);
 int graph_remove(ARC_GraphNode *node, bool free);
 ARC_GraphNode *graph_find(ARC_GraphNode *parent, char *targ);
 ARC_GraphNode *init_any_graph();
