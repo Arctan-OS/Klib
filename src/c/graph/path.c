@@ -40,6 +40,25 @@ struct arc_path_node {
         size_t name_len;
 };
 
+/*
+        (path_to_collapse, expected_result)
+        test("/", "/");
+        test("//", "/");
+        test("/./", "/");
+        test("/.", "/");
+        test("/a/.", "/a/");
+        test("/../", "/");
+        test("/..", "/");
+        test("/a/..", "/");
+        test("/a/../b/c/d", "/b/c/d");
+        test("/../a", "/a");
+        test("../a/b/c/d", "../a/b/c/d");
+        test("./a/b/c/d", "a/b/c/d"); (FAIL)
+        test("/./..//../././//../", "/");
+        test("//a/b/c/../def/.//", "/a/b/def/");
+        test("//a/b/c/../def/.//.", "/a/b/def/");
+        test("//a/b/c/../def/.//..", "/a/b/"); (FAIL)
+*/
 char *path_collapse(char *_path) {
         if (_path == NULL) {
                 return NULL;
