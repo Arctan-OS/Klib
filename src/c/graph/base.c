@@ -52,13 +52,14 @@ int graph_add(ARC_GraphNode *parent, ARC_GraphNode *node) {
 
         ARC_ATOMIC_XCHG(&parent->child, &node, &node->next);
         ARC_ATOMIC_INC(parent->child_count);
-        ARC_ATOMIC_INC(parent->ref_count);
 
         return 0;
 }
 
 static int graph_recursive_free(ARC_GraphNode *node) {
-        if (node->ref_count > 0) {
+        int rc = ARC_ATOMIC_LOAD(node->ref_count);
+
+        if (rc > 0) {
                 return -1;
         }
 
@@ -87,7 +88,6 @@ int graph_remove(ARC_GraphNode *node, bool free) {
         if (parent != NULL) {
                 ARC_ATOMIC_XCHG(&parent->child, &node->next, &node->next);
                 ARC_ATOMIC_DEC(parent->child_count);
-                ARC_ATOMIC_DEC(parent->ref_count);
                 // node->next = node; If not, something went wrong
         }
 
@@ -112,8 +112,12 @@ ARC_GraphNode *graph_find(ARC_GraphNode *parent, char *targ) {
         while (current != NULL && strcmp(targ, current->name) != 0) {
                 ARC_GraphNode *t = current;
                 current = ARC_ATOMIC_LOAD(current->next);
-                ARC_ATOMIC_DEC(t->ref_count);
                 ARC_ATOMIC_INC(current->ref_count);
+                ARC_ATOMIC_DEC(t->ref_count);
+
+                if (current == t) {
+                        break;
+                }
         }
 
         size_t b = ARC_ATOMIC_LOAD(parent->child_count);
@@ -144,9 +148,13 @@ ARC_GraphNode *graph_find(ARC_GraphNode *parent, char *targ) {
         while (current != NULL && (r = strcmp(targ, current->name)) != 0 && delta > 0) {
                 ARC_GraphNode *t = current;
                 current = ARC_ATOMIC_LOAD(current->next);
-                ARC_ATOMIC_DEC(t->ref_count);
                 ARC_ATOMIC_INC(current->ref_count);
+                ARC_ATOMIC_DEC(t->ref_count);
                 delta--;
+
+                if (current == t) {
+                        break;
+                }
         }
 
         ARC_ATOMIC_DEC(parent->ref_count);
