@@ -188,5 +188,8 @@ ARC_GraphNode *graph_find(ARC_GraphNode *parent, char *targ) {
 }
 
 ARC_GraphNode *init_base_graph(size_t arb_size) {
-        return graph_create(arb_size);
+        ARC_GraphNode *root = graph_create(arb_size);
+        root->ref_count++; // Make it impossible to remove the root
+
+        return root;
 }
