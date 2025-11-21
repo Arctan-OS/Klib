@@ -218,5 +218,67 @@ ARC_GraphNode *path_traverse(ARC_GraphNode *start, char *path) {
                 return NULL;
         }
 
-        return NULL;
+        ARC_GraphNode *parent = start;
+        ARC_GraphNode *current = NULL;
+
+        size_t max = strlen(path);
+        size_t i = 0;
+        size_t j = SIZE_MAX;
+
+        while (i < max) {
+                if (path[i] != '/' && i + 1 < max) {
+                        goto end;
+                }
+
+                if (i + 1 < max) {
+                        i++;
+                }
+
+                if (j == SIZE_MAX) {
+                        goto end_1;
+                }
+
+                size_t name_len = i - j - 1;
+                char *name = &path[j + 1];
+
+                if (name_len == 1 && path[j + 1] == '.') {
+                        goto end_1;
+                } else if (name_len == 2 && path[j + 1] == '.' && path[j + 2] == '.') {
+                        ARC_GraphNode *t = ARC_ATOMIC_LOAD(current->parent);
+                        ARC_ATOMIC_INC(t->ref_count);
+                        ARC_ATOMIC_DEC(current->ref_count);
+                        current = t;
+                        goto end_1;
+                }
+
+                current = ARC_ATOMIC_LOAD(parent->child);
+                while (current != NULL) {
+                        if (ARC_ATOMIC_LOAD(current->next) == current) {
+                                current = NULL;
+                                break;
+                        }
+
+                        if (strncmp(name, current->name, name_len) == 0) {
+                                break;
+                        }
+
+                        current = ARC_ATOMIC_LOAD(current->next);
+                }
+
+                if (current == NULL) {
+                        break;
+                }
+
+                ARC_ATOMIC_INC(current->ref_count);
+                ARC_ATOMIC_DEC(parent->ref_count);
+
+                parent = current;
+
+                end_1:;
+                j = i;
+                end:;
+                i++;
+        }
+
+        return current;
 }
