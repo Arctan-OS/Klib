@@ -42,22 +42,23 @@ struct arc_path_node {
 
 /*
         (path_to_collapse, expected_result)
-        test("/", "/");
-        test("//", "/");
-        test("/./", "/");
-        test("/.", "/");
-        test("/a/.", "/a/");
-        test("/../", "/");
-        test("/..", "/");
-        test("/a/..", "/");
-        test("/a/../b/c/d", "/b/c/d");
-        test("/../a", "/a");
-        test("../a/b/c/d", "../a/b/c/d");
-        test("./a/b/c/d", "a/b/c/d"); (FAIL)
-        test("/./..//../././//../", "/");
-        test("//a/b/c/../def/.//", "/a/b/def/");
-        test("//a/b/c/../def/.//.", "/a/b/def/");
-        test("//a/b/c/../def/.//..", "/a/b/"); (FAIL)
+	test("/", "/");
+	test("//", "/");
+	test("/./", "/");
+	test("/.", "/");
+	test("./", "");
+	test("/a/.", "/a/");
+	test("/../", "/");
+	test("/..", "/");
+	test("/a/..", "/");
+	test("/a/../b/c/d", "/b/c/d");
+	test("/../a", "/a");
+	test("../a/b/c/d", "../a/b/c/d");
+	test("./a/b/c/d", "a/b/c/d");
+	test("/./..//../././//../", "/");
+	test("//a/b/c/../def/.//", "/a/b/def/");
+	test("//a/b/c/../def/.//.", "/a/b/def/");
+	test("//a/b/c/../def/.//..", "/a/b/");
 */
 char *path_collapse(char *_path) {
         if (_path == NULL) {
@@ -77,9 +78,6 @@ char *path_collapse(char *_path) {
         //  * "/../" (and prior component)
         //  * "/."
         //  * "/.." (and prior component)
-
-        //printf("Collapsing: %s\n", path);
-        //printf("---------\n");
 
         redo:;
         size_t max = strlen(path);
@@ -106,7 +104,7 @@ char *path_collapse(char *_path) {
 
                 sep2 = sep1;
                 sep1 = sep0;
-                sep0 = i + (i + 1 == max);
+                sep0 = i + (path[i] != '/' && i + 1 == max);
 
                 size_t to = SIZE_MAX;
 
@@ -127,7 +125,7 @@ char *path_collapse(char *_path) {
                         }
                         case 3: {
                                 if (path[sep0 - 1] == '.' && path[sep0 - 2] == '.') {
-                                        to = sep2;
+                                        to = sep2 == SIZE_MAX ? sep1 : sep2;
                                 }
 
                                 break;
@@ -135,32 +133,7 @@ char *path_collapse(char *_path) {
                 }
 
                 if (to != SIZE_MAX) {
-                        goto copy;
-                }
-
-                switch (sep1 - sep2) {
-                        case 1: {
-                                if (path[sep1] == '/') {
-                                        to = sep2;
-                                }
-
-                                break;
-                        }
-                        case 2: {
-                                if (path[sep1 - 1] == '.') {
-                                        to = sep2;
-                                }
-
-                                break;
-                        }
-                }
-
-
-                if (to != SIZE_MAX) {
-                        copy:;
                         to += (path[sep0] == 0);
-                        //printf("sep0=%lu sep1=%lu sep2=%lu\nMoving sep0 to %lu for %lu bytes\nCopying %s to %s\n", sep0, sep1, sep2, to, max - sep0 + 1, &path[sep0], &path[to]);
-                        //printf("---------\n");
 
                         memcpy(&path[to], &path[sep0], max - sep0 + 1);
                         removed += sep0 - to;
@@ -175,7 +148,10 @@ char *path_collapse(char *_path) {
                 goto redo;
         }
 
-        return path;
+        char *o_path = strdup(path);
+        free(path);
+
+        return o_path;
 }
 
 char *path_get(ARC_GraphNode *node) {
