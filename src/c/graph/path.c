@@ -78,50 +78,93 @@ char *path_collapse(char *_path) {
         //  * "/."
         //  * "/.." (and prior component)
 
+        //printf("Collapsing: %s\n", path);
+        //printf("---------\n");
+
         redo:;
         size_t max = strlen(path);
         size_t removed = 0;
         size_t i = 0;
+
+        size_t sep0 = SIZE_MAX;
+        size_t sep1 = SIZE_MAX;
+        size_t sep2 = SIZE_MAX;
+
+        if (max == 1 && path[0] == '/') {
+                return path;
+        }
+
+        if (max >= 2 && path[0] == '.' && path[1] == '/') {
+                memcpy(path, path + 2, max - 1);
+                removed += 2;
+        }
+
         while (path[i]) {
-                if (path[i] != '/') {
+                if (path[i] != '/' && i + 1 < max) {
                         goto end;
                 }
 
-                size_t forward = 0;
-                size_t backward = 0;
-                if (path[i + 1] == '/') {
-                        forward = 1;
-                } else if (path[i + 1] == '.') {
-                        forward = 2;
+                sep2 = sep1;
+                sep1 = sep0;
+                sep0 = i + (i + 1 == max);
 
-                        if (i + 2 < max && path[i + 2] == '.') {
-                                // Calculate the length of the last component
-                                // and set it as backward
-                                size_t j = i - 1;
-                                for (; j != SIZE_MAX; j--) {
-                                        if (path[j] == '/') {
-                                                backward = i - j;
-                                                break;
-                                        }
+                size_t to = SIZE_MAX;
+
+                switch (sep0 - sep1) {
+                        case 1: {
+                                if (path[sep0] == '/') {
+                                        to = sep1;
                                 }
 
-                                forward++;
+                                break;
+                        }
+                        case 2: {
+                                if (path[sep0 - 1] == '.') {
+                                        to = sep1;
+                                }
+
+                                break;
+                        }
+                        case 3: {
+                                if (path[sep0 - 1] == '.' && path[sep0 - 2] == '.') {
+                                        to = sep2;
+                                }
+
+                                break;
                         }
                 }
 
-                if (forward == 2 && i + 2 >= max && backward == 0) {
-                        path[i + 1] = 0;
-                        removed += forward - 1;
-                        goto end;
+                if (to != SIZE_MAX) {
+                        goto copy;
                 }
 
-                if (forward > 0) {
-                        if (path[i + forward] == 0) {
-                                backward--;
+                switch (sep1 - sep2) {
+                        case 1: {
+                                if (path[sep1] == '/') {
+                                        to = sep2;
+                                }
+
+                                break;
                         }
-                        //printf("Copying %s to %s for %lu chars\n", &path[i + forward], &path[i - backward], max - (i + forward + removed) + 1);
-                        memcpy(&path[i - backward], &path[i + forward], max - (i + forward + removed) + 1);
-                        removed += forward + backward;
+                        case 2: {
+                                if (path[sep1 - 1] == '.') {
+                                        to = sep2;
+                                }
+
+                                break;
+                        }
+                }
+
+
+                if (to != SIZE_MAX) {
+                        copy:;
+                        to += (path[sep0] == 0);
+                        //printf("sep0=%lu sep1=%lu sep2=%lu\nMoving sep0 to %lu for %lu bytes\nCopying %s to %s\n", sep0, sep1, sep2, to, max - sep0 + 1, &path[sep0], &path[to]);
+                        //printf("---------\n");
+
+                        memcpy(&path[to], &path[sep0], max - sep0 + 1);
+                        removed += sep0 - to;
+                        break;
                 }
 
                 end:;
