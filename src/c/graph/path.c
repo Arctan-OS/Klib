@@ -329,6 +329,7 @@ ARC_GraphNode *path_traverse(ARC_GraphNode *start, char *path, ARC_PathCreateCal
                         if (graph_add(parent, node, _name) != 0) {
                                 break;
                         }
+                        free(_name);
                 } else if (current == NULL) {
                         break;
                 }
