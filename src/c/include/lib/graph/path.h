@@ -32,7 +32,8 @@
 #include <stddef.h>
 
 char *path_collapse(char *_path);
-char *path_get(ARC_GraphNode *node);
+char *path_get_abs(ARC_GraphNode *node);
+char *path_get_rel(ARC_GraphNode *to, ARC_GraphNode *from);
 ARC_GraphNode *path_traverse(ARC_GraphNode *start, char *path);
 
 #endif

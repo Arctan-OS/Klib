@@ -24,6 +24,7 @@
  *
  * @DESCRIPTION
 */
+#include "global.h"
 #include "lib/atomics.h"
 #include "lib/graph/path.h"
 #include "lib/graph/base.h"
@@ -154,7 +155,7 @@ char *path_collapse(char *_path) {
         return o_path;
 }
 
-char *path_get(ARC_GraphNode *node) {
+char *path_get_abs(ARC_GraphNode *node) {
         if (node == NULL) {
                 return NULL;
         }
@@ -212,6 +213,63 @@ char *path_get(ARC_GraphNode *node) {
 
         return NULL;
 }
+
+char *path_get_rel(ARC_GraphNode *_to, ARC_GraphNode *_from) {
+        if (_from == NULL || _to == NULL) {
+                return NULL;
+        }
+
+        char *to = path_get_abs(_to);
+        if (to == NULL) {
+                return NULL;
+        }
+
+        char *from = path_get_abs(_from);
+        if (from == NULL) {
+                free(to);
+                return NULL;
+        }
+
+        size_t max = min(strlen(from), strlen(to));
+        size_t delta = 0;
+        for (size_t i = 0; i < max; i++) {
+                if (from[i] != to[i]) {
+                        break;
+                }
+
+                if (from[i] == '/') {
+                        delta = i;
+                }
+        }
+
+        //             + +
+        // A: a/b/c/d/e/f/g.txt
+        // B: a/b/c/d/x.txt
+        //            ^
+
+        int dot_dots = 0;
+        for (size_t i = strlen(from) - 1; i > delta; i--) {
+                if (from[i] == '/') {
+                        dot_dots++;
+                }
+        }
+
+        size_t fin_size = (dot_dots * 3) + strlen(to + delta);
+
+        char *path = (char *)alloc(fin_size + 1);
+        memset(path, 0, fin_size + 1);
+
+        for (int i = 0; i < dot_dots; i++) {
+                sprintf(path + (i * 3), "../");
+        }
+        sprintf(path + (dot_dots * 3), "%s", to + delta + 1);
+
+        free(from);
+        free(to);
+
+        return path;
+}
+
 
 ARC_GraphNode *path_traverse(ARC_GraphNode *start, char *path) {
         if (path == NULL) {
