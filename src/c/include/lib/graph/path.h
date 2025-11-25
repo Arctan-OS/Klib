@@ -30,10 +30,13 @@
 #include "lib/graph/base.h"
 
 #include <stddef.h>
+#include <stdbool.h>
+
+typedef ARC_GraphNode *(*ARC_PathCreateCallback)(ARC_GraphNode *parent, char *name);
 
 char *path_collapse(char *_path);
 char *path_get_abs(ARC_GraphNode *node);
 char *path_get_rel(ARC_GraphNode *to, ARC_GraphNode *from);
-ARC_GraphNode *path_traverse(ARC_GraphNode *start, char *path);
+ARC_GraphNode *path_traverse(ARC_GraphNode *start, char *path, ARC_PathCreateCallback);
 
 #endif

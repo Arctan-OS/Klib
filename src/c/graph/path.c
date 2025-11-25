@@ -271,7 +271,7 @@ char *path_get_rel(ARC_GraphNode *_to, ARC_GraphNode *_from) {
 }
 
 
-ARC_GraphNode *path_traverse(ARC_GraphNode *start, char *path) {
+ARC_GraphNode *path_traverse(ARC_GraphNode *start, char *path, ARC_PathCreateCallback callback) {
         if (path == NULL) {
                 return NULL;
         }
@@ -323,7 +323,13 @@ ARC_GraphNode *path_traverse(ARC_GraphNode *start, char *path) {
                         current = ARC_ATOMIC_LOAD(current->next);
                 }
 
-                if (current == NULL) {
+                if (current == NULL && callback != NULL) {
+                        char *_name = strndup(name, name_len);
+                        ARC_GraphNode *node = callback(parent, _name);
+                        if (graph_add(parent, node, _name) != 0) {
+                                break;
+                        }
+                } else if (current == NULL) {
                         break;
                 }
 
