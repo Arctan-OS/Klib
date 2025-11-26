@@ -109,6 +109,7 @@ int graph_remove(ARC_GraphNode *node, bool free) {
         if (parent != NULL) {
                 ARC_ATOMIC_XCHG(&parent->child, &node->next, &node->next);
                 ARC_ATOMIC_DEC(parent->child_count);
+                node->parent = NULL;
                 // node->next = node; If not, something went wrong
         }
 
