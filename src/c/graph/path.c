@@ -155,16 +155,16 @@ char *path_collapse(char *_path) {
         return o_path;
 }
 
-char *path_get_abs(ARC_GraphNode *node) {
-        if (node == NULL) {
+char *path_get_abs(ARC_GraphNode *to, ARC_GraphNode *from) {
+        if (from == NULL) {
                 return NULL;
         }
 
-        ARC_GraphNode *current = node;
+        ARC_GraphNode *current = from;
         size_t ret_size = 1; // Zero terminator
 
         struct arc_path_node *n = NULL;
-        while (current != NULL) {
+        while (current != NULL && current != to) {
                 ARC_ATOMIC_INC(current->ref_count); // NOTE: This is to prevent potential move operations
                                                     //       (remove(node, false) + create(parent, node, "new_name"))
                 struct arc_path_node *t = alloc(sizeof(*n));
