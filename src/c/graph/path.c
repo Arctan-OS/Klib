@@ -36,9 +36,9 @@
 #include "interface/printf.h"
 
 struct arc_path_node {
-        ARC_GraphNode *node;
         struct arc_path_node *next;
-        size_t name_len;
+        ARC_GraphNode *node;
+        size_t len;
 };
 
 /*
@@ -155,51 +155,66 @@ char *path_collapse(char *_path) {
         return o_path;
 }
 
-char *path_get_abs(ARC_GraphNode *to, ARC_GraphNode *from) {
+char *path_get_abs(ARC_GraphNode *from, ARC_GraphNode *to) {
         if (from == NULL) {
                 return NULL;
         }
 
+        if (from == to) {
+                char *ret = alloc(1);
+                if (ret == NULL) {
+                        return NULL;
+                }
+                *ret = 0;
+                return ret;
+        }
+
         ARC_GraphNode *current = from;
-        size_t ret_size = 1; // Zero terminator
+        size_t ret_size = 0;
 
         struct arc_path_node *n = NULL;
         while (current != NULL && current != to) {
+                ARC_GraphNode *parent = ARC_ATOMIC_LOAD(current->parent);
                 ARC_ATOMIC_INC(current->ref_count); // NOTE: This is to prevent potential move operations
                                                     //       (remove(node, false) + create(parent, node, "new_name"))
-                struct arc_path_node *t = alloc(sizeof(*n));
 
+                struct arc_path_node *t = alloc(sizeof(*n));
                 if (t == NULL) {
+                        ARC_DEBUG(ERR, "Failed to allocate new node\n");
                         goto epic_fail;
                 }
 
                 t->node = current;
-                t->name_len = strlen(current->name);
+                t->len = strlen(current->name);
                 t->next = n;
                 n = t;
 
-                ret_size += t->name_len + 1; // + '/'
+                ret_size += t->len + 1; // + '/'
+                current = parent;
         }
 
-        char *_ret = alloc(ret_size);
+        char *ret = alloc(ret_size);
 
-        if (_ret == NULL) {
+        if (ret == NULL) {
                 goto epic_fail;
         }
 
-        memset(_ret, 0, ret_size);
+        memset(ret, 0, ret_size);
 
         size_t i = 0;
         while (n != NULL) {
-                _ret[i] = '/';
-                strcpy(_ret + i + 1, n->node->name);
-                i += n->name_len + 1;
+                strcpy(ret + i, n->node->name);
+                i += n->len;
+                ret[i++] = '/';
+
                 ARC_ATOMIC_DEC(n->node->ref_count);
+
+                void *t = n;
                 n = n->next;
+                free(t);
         }
 
-        char *ret = path_collapse(_ret);
-        free(_ret);
+        ret[ret_size - 1] = 0;
 
         return ret;
 
@@ -214,7 +229,7 @@ char *path_get_abs(ARC_GraphNode *to, ARC_GraphNode *from) {
         return NULL;
 }
 
-char *path_get_rel(ARC_GraphNode *_to, ARC_GraphNode *_from) {
+char *path_get_rel(ARC_GraphNode *_from, ARC_GraphNode *_to) {
         if (_from == NULL || _to == NULL) {
                 return NULL;
         }
@@ -230,15 +245,9 @@ char *path_get_rel(ARC_GraphNode *_to, ARC_GraphNode *_from) {
                 return NULL;
         }
 
-        printf("To=%s\nFrom=%s\n", to, from);
-
         size_t max = min(strlen(from), strlen(to));
         size_t delta = 0;
-        for (size_t i = 0; i < max; i++) {
-                if (from[i] != to[i]) {
-                        break;
-                }
-
+        for (size_t i = 0; i < max && from[i] == to[i]; i++) {
                 if (from[i] == '/') {
                         delta = i;
                 }
@@ -278,7 +287,7 @@ ARC_GraphNode *path_traverse(ARC_GraphNode *start, char *path, ARC_PathCreateCal
                 return NULL;
         }
 
-        ARC_DEBUG(INFO, "Traversing %s from %p (%p %p)\n", path, start, callback, arg);
+//        ARC_DEBUG(INFO, "Traversing %s from %p (%p %p)\n", path, start, callback, arg);
 
         ARC_GraphNode *parent = start;
         ARC_GraphNode *current = start;
@@ -287,7 +296,7 @@ ARC_GraphNode *path_traverse(ARC_GraphNode *start, char *path, ARC_PathCreateCal
         size_t i = 0;
         size_t j = SIZE_MAX;
 
-        ARC_DEBUG(INFO, "%p %p %lu %lu %lu\n", parent, current, max, i, j);
+//        ARC_DEBUG(INFO, "%p %p %lu %lu %lu\n", parent, current, max, i, j);
 
         while (i < max) {
                 if (path[i] != '/' && i + 1 < max) {
@@ -305,13 +314,13 @@ ARC_GraphNode *path_traverse(ARC_GraphNode *start, char *path, ARC_PathCreateCal
                 size_t name_len = i - j - 1;
                 char *name = &path[j + 1];
 
-                ARC_DEBUG(INFO, "Found component name: %.*s\n", name_len, name);
+//                ARC_DEBUG(INFO, "Found component name: %.*s\n", name_len, name);
 
                 if (name_len == 1 && path[j] == '.') {
-                        ARC_DEBUG(INFO, "Is dot\n");
+//                        ARC_DEBUG(INFO, "Is dot\n");
                         goto end_1;
                 } else if (name_len == 2 && parent != NULL && path[j] == '.' && path[j + 1] == '.') {
-                        ARC_DEBUG(INFO, "Is dot dot, going up\n");
+//                        ARC_DEBUG(INFO, "Is dot dot, going up\n");
                         ARC_GraphNode *t = ARC_ATOMIC_LOAD(parent->parent);
                         ARC_ATOMIC_INC(t->ref_count);
                         ARC_ATOMIC_DEC(current->ref_count);
@@ -320,18 +329,18 @@ ARC_GraphNode *path_traverse(ARC_GraphNode *start, char *path, ARC_PathCreateCal
                         goto end_1;
                 }
 
-                ARC_DEBUG(INFO, "Not dot (dot) dirs (parent=%p)\n", parent);
+//                ARC_DEBUG(INFO, "Not dot (dot) dirs (parent=%p)\n", parent);
                 current = ARC_ATOMIC_LOAD(parent->child);
                 while (current != NULL) {
                         ARC_GraphNode *next = ARC_ATOMIC_LOAD(current->next);
                         if (next == current) {
-                                ARC_DEBUG(ERR, "Cut off from next component due to remove\n");
+//                                ARC_DEBUG(ERR, "Cut off from next component due to remove\n");
                                 current = NULL;
                                 break;
                         }
 
                         if (strncmp(name, current->name, name_len) == 0) {
-                                ARC_DEBUG(INFO, "Found a match with %p (%s)\n", current, current->name);
+//                                ARC_DEBUG(INFO, "Found a match with %p (%s)\n", current, current->name);
                                 break;
                         }
 
@@ -339,11 +348,11 @@ ARC_GraphNode *path_traverse(ARC_GraphNode *start, char *path, ARC_PathCreateCal
                 }
 
                 if (current == NULL && callback != NULL) {
-                        ARC_DEBUG(INFO, "Node does not exist, trying callback\n");
+//                        ARC_DEBUG(INFO, "Node does not exist, trying callback\n");
                         char *_name = strndup(name, name_len);
                         current = callback(parent, _name, &path[i], arg);
                         if (graph_add(parent, current, _name) != 0) {
-                                ARC_DEBUG(ERR, "Node could not be added with name %s", _name);
+//                                ARC_DEBUG(ERR, "Node could not be added with name %s", _name);
                                 break;
                         }
                         free(_name);

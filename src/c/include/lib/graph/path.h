@@ -35,8 +35,8 @@
 typedef ARC_GraphNode *(*ARC_PathCreateCallback)(ARC_GraphNode *parent, char *name, char *remaining, void *arg);
 
 char *path_collapse(char *_path);
-char *path_get_abs(ARC_GraphNode *to, ARC_GraphNode *from);
-char *path_get_rel(ARC_GraphNode *to, ARC_GraphNode *from);
+char *path_get_abs(ARC_GraphNode *from, ARC_GraphNode *to);
+char *path_get_rel(ARC_GraphNode *from, ARC_GraphNode *to);
 ARC_GraphNode *path_traverse(ARC_GraphNode *start, char *path, ARC_PathCreateCallback, void *arg);
 
 #endif
