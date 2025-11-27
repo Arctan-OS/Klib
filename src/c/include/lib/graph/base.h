@@ -43,6 +43,7 @@ typedef struct ARC_GraphNode {
 } ARC_GraphNode;
 
 ARC_GraphNode *graph_create(size_t arb_size);
+ARC_GraphNode *graph_duplicate(ARC_GraphNode *node);
 int graph_add(ARC_GraphNode *parent, ARC_GraphNode *node, char *_name);
 int graph_remove(ARC_GraphNode *node, bool free);
 ARC_GraphNode *graph_find(ARC_GraphNode *parent, char *targ);

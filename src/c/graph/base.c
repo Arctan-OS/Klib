@@ -69,6 +69,24 @@ int graph_add(ARC_GraphNode *parent, ARC_GraphNode *node, char *_name) {
         return 0;
 }
 
+ARC_GraphNode *graph_duplicate(ARC_GraphNode *node) {
+        if (node == NULL) {
+                return NULL;
+        }
+
+        ARC_GraphNode *dup = graph_create(node->arb_size);
+
+        if (dup == NULL) {
+                return NULL;
+        }
+
+        memcpy(dup, node, sizeof(*node) + node->arb_size);
+
+        dup->name = strdup(node->name);
+
+        return dup;
+}
+
 static int graph_recursive_free(ARC_GraphNode *node) {
         if (ARC_ATOMIC_LOAD(node->ref_count) > 1) {
                 return -1;
