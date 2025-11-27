@@ -312,15 +312,15 @@ ARC_GraphNode *path_traverse(ARC_GraphNode *start, char *path, ARC_PathCreateCal
                 }
 
                 size_t name_len = i - j - 1;
-                char *name = &path[j + 1];
+                char *name = strndup(&path[j + 1], name_len);
 
-//                ARC_DEBUG(INFO, "Found component name: %.*s\n", name_len, name);
+                if (name[name_len - 1] == '/') {
+                        name[name_len - 1] = 0;
+                }
 
-                if (name_len == 1 && path[j] == '.') {
-//                        ARC_DEBUG(INFO, "Is dot\n");
+                if (name_len == 1 && name[0] == '.') {
                         goto end_1;
-                } else if (name_len == 2 && parent != NULL && path[j] == '.' && path[j + 1] == '.') {
-//                        ARC_DEBUG(INFO, "Is dot dot, going up\n");
+                } else if (name_len == 2 && parent != NULL && name[0] == '.' && name[1] == '.') {
                         ARC_GraphNode *t = ARC_ATOMIC_LOAD(parent->parent);
                         ARC_ATOMIC_INC(t->ref_count);
                         ARC_ATOMIC_DEC(current->ref_count);
@@ -329,38 +329,22 @@ ARC_GraphNode *path_traverse(ARC_GraphNode *start, char *path, ARC_PathCreateCal
                         goto end_1;
                 }
 
-//                ARC_DEBUG(INFO, "Not dot (dot) dirs (parent=%p)\n", parent);
-                current = ARC_ATOMIC_LOAD(parent->child);
-                while (current != NULL) {
-                        ARC_GraphNode *next = ARC_ATOMIC_LOAD(current->next);
-                        if (next == current) {
-//                                ARC_DEBUG(ERR, "Cut off from next component due to remove\n");
-                                current = NULL;
-                                break;
-                        }
-
-                        if (strncmp(name, current->name, name_len) == 0) {
-//                                ARC_DEBUG(INFO, "Found a match with %p (%s)\n", current, current->name);
-                                break;
-                        }
-
-                        current = next;
-                }
+                current = graph_find(parent, name);
 
                 if (current == NULL && callback != NULL) {
-//                        ARC_DEBUG(INFO, "Node does not exist, trying callback\n");
-                        char *_name = strndup(name, name_len);
-                        current = callback(parent, _name, &path[i], arg);
-                        if (graph_add(parent, current, _name) != 0) {
-//                                ARC_DEBUG(ERR, "Node could not be added with name %s", _name);
+                        current = callback(parent, name, &path[i], arg);
+                        if (graph_add(parent, current, name) != 0) {
                                 break;
                         }
-                        free(_name);
+                        ARC_ATOMIC_INC(current->ref_count);
                 } else if (current == NULL) {
                         break;
                 }
 
-                ARC_ATOMIC_INC(current->ref_count);
+                free(name);
+
+                // NOTE: graph_find leaves current->ref_count incremented,
+                //       no need to increment here
                 ARC_ATOMIC_DEC(parent->ref_count);
 
                 parent = current;
