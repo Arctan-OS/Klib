@@ -83,6 +83,7 @@ ARC_GraphNode *graph_duplicate(ARC_GraphNode *node) {
         memcpy(dup, node, sizeof(*node) + node->arb_size);
 
         dup->name = strdup(node->name);
+        dup->child = NULL;
 
         return dup;
 }
