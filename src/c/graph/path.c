@@ -287,16 +287,12 @@ ARC_GraphNode *path_traverse(ARC_GraphNode *start, char *path, ARC_PathCreateCal
                 return NULL;
         }
 
-//        ARC_DEBUG(INFO, "Traversing %s from %p (%p %p)\n", path, start, callback, arg);
-
         ARC_GraphNode *parent = start;
         ARC_GraphNode *current = start;
 
         size_t max = strlen(path);
         size_t i = 0;
         size_t j = SIZE_MAX;
-
-//        ARC_DEBUG(INFO, "%p %p %lu %lu %lu\n", parent, current, max, i, j);
 
         while (i < max) {
                 if (path[i] != '/' && i + 1 < max) {
@@ -338,6 +334,7 @@ ARC_GraphNode *path_traverse(ARC_GraphNode *start, char *path, ARC_PathCreateCal
                         }
                         ARC_ATOMIC_INC(current->ref_count);
                 } else if (current == NULL) {
+                        ARC_ATOMIC_DEC(parent->ref_count);
                         break;
                 }
 
@@ -354,6 +351,6 @@ ARC_GraphNode *path_traverse(ARC_GraphNode *start, char *path, ARC_PathCreateCal
                 end:;
                 i++;
         }
-
+                
         return current;
 }

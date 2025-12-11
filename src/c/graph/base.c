@@ -90,7 +90,7 @@ ARC_GraphNode *graph_duplicate(ARC_GraphNode *node) {
 
 static int graph_recursive_free(ARC_GraphNode *node) {
         if (ARC_ATOMIC_LOAD(node->ref_count) > 1) {
-                return -1;
+                return 0;
         }
 
         int r = 0;
@@ -113,10 +113,13 @@ static int graph_recursive_free(ARC_GraphNode *node) {
 
 int graph_remove(ARC_GraphNode *node, bool free) {
         if (node == NULL) {
+                ARC_DEBUG(ERR, "No node given\n");
                 return -1;
         }
 
-        if (ARC_ATOMIC_INC(node->ref_count) > 1) { // NOTE: Prevents other remove operations
+        int rc = 0;
+        if ((rc = ARC_ATOMIC_INC(node->ref_count)) > 1) { // NOTE: Prevents other remove operations
+                ARC_DEBUG(ERR, "Node in use or already being removed %d\n", rc);
                 return -2;
         }
 
@@ -131,7 +134,7 @@ int graph_remove(ARC_GraphNode *node, bool free) {
         ARC_ATOMIC_DEC(parent->child_count);
 
         if (free) {
-                return graph_recursive_free(node) - 2;
+                return graph_recursive_free(node) > 0 ? 0 : -3;
         } else {
                 ARC_ATOMIC_DEC(node->ref_count);
         }
@@ -144,30 +147,24 @@ ARC_GraphNode *graph_find(ARC_GraphNode *parent, char *targ) {
                 return NULL;
         }
 
-        ARC_DEBUG(INFO, "-- Finding %s under %p --\n", targ, parent);
-
-        full_recheck:;
         ARC_ATOMIC_INC(parent->ref_count);
+        full_recheck:;
         size_t a = ARC_ATOMIC_LOAD(parent->child_count);
-
-        ARC_DEBUG(INFO, "a=%lu\n", a);
 
         ARC_GraphNode *current = ARC_ATOMIC_LOAD(parent->child);
 
         if (current == NULL) {
+                ARC_ATOMIC_DEC(parent->ref_count);
                 return NULL;
         }
         
         ARC_GraphNode *initial = current;
         
-        ARC_DEBUG(INFO, "current=%p\n", current);
         ARC_ATOMIC_INC(current->ref_count);
 
         while (current != NULL && strcmp(targ, current->name) != 0) {
-                ARC_DEBUG(INFO, "%s, %p : %s\n", current->name, current, targ);
                 ARC_GraphNode *t = current;
                 current = ARC_ATOMIC_LOAD(current->next);
-                ARC_DEBUG(INFO, "current=%p\n", current);
                 if (current == t) {
                         ARC_DEBUG(INFO, "Current == Last, full recheck needed\n");
                         goto full_recheck;
@@ -181,40 +178,31 @@ ARC_GraphNode *graph_find(ARC_GraphNode *parent, char *targ) {
 
         size_t b = ARC_ATOMIC_LOAD(parent->child_count);
 
-        ARC_DEBUG(INFO, "b=%lu\n", b);
-
         if (current != NULL) {
-                ARC_DEBUG(INFO, "Found %s under %p as %p\n", targ, parent, current);
                 ARC_ATOMIC_DEC(parent->ref_count);
-
                 return current;
         }
 
         size_t delta = b - a;
-        ARC_DEBUG(INFO, "delta=%lu\n", delta);
 
         if (a > b) {
-                ARC_DEBUG(INFO, "Nodes have been removed, rechecking all\n");
                 // Nodes have been removed, potentially added, recheck every node
                 goto full_recheck;
         } else if (a == b) {
-                ARC_DEBUG(INFO, "No change, rechecking first element\n");
                 // Check the current child node, most likely one node was removed and
                 // potentially the target node added
                 delta = 1;
         } else {
-                ARC_DEBUG(INFO, "Nodes added, rechecking on delta\n");
                 // Nodes have been added, recheck delta
         }
 
         current = ARC_ATOMIC_LOAD(parent->child);
 
         if ((delta == 1 && current == initial) || current == NULL) {
-                ARC_DEBUG(INFO, "Absolutely no change, no need to recheck\n");
+                ARC_ATOMIC_DEC(parent->ref_count);
                 return NULL;
         }
 
-        ARC_DEBUG(INFO, "current=%p\n", current);
         ARC_ATOMIC_INC(current->ref_count);
 
         int r = -1;
@@ -223,7 +211,6 @@ ARC_GraphNode *graph_find(ARC_GraphNode *parent, char *targ) {
                 current = ARC_ATOMIC_LOAD(current->next);
 
                 if (current == t) {
-                        ARC_DEBUG(INFO, "Current == Last, full recheck needed\n");
                         goto full_recheck;
                 }
 
@@ -238,7 +225,6 @@ ARC_GraphNode *graph_find(ARC_GraphNode *parent, char *targ) {
         ARC_ATOMIC_DEC(parent->ref_count);
 
         if (r == 0) {
-                ARC_DEBUG(INFO, "Found node %p\n", current);
                 return current;
         }
 
