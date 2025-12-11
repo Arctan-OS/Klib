@@ -143,7 +143,7 @@ int gpt_get_partitions(char *filepath) {
 		dri_args.size_in_lbas = length_in_lbas;
 		dri_args.partition_number = i;
 
-		init_resource(ARC_DRIDEF_PARTITION_DUMMY, &dri_args);
+		init_resource(ARC_DRIGRP_DEV, ARC_DRIDEF_DEV_PARTITION_DUMMY, &dri_args);
 	}
 
 	return 0;
