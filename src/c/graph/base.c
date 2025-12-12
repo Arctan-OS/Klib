@@ -24,6 +24,7 @@
  *
  * @DESCRIPTION
 */
+#include "arch/x86-64/gdt.h"
 #include "global.h"
 #include "lib/atomics.h"
 #include "lib/graph/base.h"
@@ -119,22 +120,54 @@ int graph_remove(ARC_GraphNode *node, bool free) {
 
         int rc = 0;
         if ((rc = ARC_ATOMIC_INC(node->ref_count)) > 1) { // NOTE: Prevents other remove operations
+                ARC_ATOMIC_DEC(node->ref_count);
                 ARC_DEBUG(ERR, "Node in use or already being removed %d\n", rc);
                 return -2;
         }
 
         ARC_GraphNode *parent = node->parent;
+        ARC_ATOMIC_INC(parent->ref_count);
 
+        full_recheck:;
         if (parent != NULL && ARC_ATOMIC_LOAD(parent->child) == node) {
                 ARC_ATOMIC_XCHG(&parent->child, &node->next, &node->next);
                 node->parent = NULL;
                 // node->next = node; If not, something went wrong
+                goto skip;
         }
 
-        ARC_ATOMIC_DEC(parent->child_count);
+        ARC_GraphNode *current = ARC_ATOMIC_LOAD(parent->child);
+        ARC_GraphNode *prev = NULL;
+        while (current != NULL && current != node) {
+                prev = current;
+                current = ARC_ATOMIC_LOAD(current->next);
+                if (current == prev) {
+                        ARC_DEBUG(INFO, "Current == Last, full recheck needed\n");
+                        goto full_recheck;
+                }
 
+                if (current != NULL) {
+                        ARC_ATOMIC_INC(current->ref_count);
+                }
+                ARC_ATOMIC_DEC(prev->ref_count);
+        }
+
+        if (current == NULL) {
+                ARC_DEBUG(ERR, "Parent %p has no children, yet node %p needs to be removed?\n", parent, node);
+                ARC_ATOMIC_DEC(parent->ref_count);
+                ARC_ATOMIC_DEC(node->ref_count);
+                return -3;
+        }
+
+        ARC_ATOMIC_XCHG(&prev->next, &node->next, &node->next);
+        // node->next = prev; If not, something went wrong
+        
+        skip:;
+        ARC_ATOMIC_INC(parent->ref_count);
+        ARC_ATOMIC_DEC(parent->child_count);
+        
         if (free) {
-                return graph_recursive_free(node) > 0 ? 0 : -3;
+                return graph_recursive_free(node) > 0 ? 0 : -4;
         } else {
                 ARC_ATOMIC_DEC(node->ref_count);
         }
