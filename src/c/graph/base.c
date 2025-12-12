@@ -112,6 +112,45 @@ static int graph_recursive_free(ARC_GraphNode *node) {
         return r;
 }
 
+static ARC_GraphNode *graph_get_prev(ARC_GraphNode *node) {
+        ARC_ATOMIC_INC(node->ref_count);
+        ARC_GraphNode *parent = node->parent;
+        ARC_ATOMIC_INC(parent->ref_count);
+        ARC_GraphNode *prev = NULL;
+        
+        full_recheck:;
+        ARC_GraphNode *current = ARC_ATOMIC_LOAD(parent->child);
+        if (current == node) {
+                goto std_ret;
+        }
+
+        ARC_ATOMIC_INC(current->ref_count);
+        while (current != NULL && current != node) {
+                prev = current;
+                current = ARC_ATOMIC_LOAD(current->next);
+
+                if (current == prev) {
+                        goto full_recheck;
+                }
+
+                if (current != NULL) {
+                        ARC_ATOMIC_INC(current->ref_count);
+                }
+                if (current != node) {
+                        ARC_ATOMIC_DEC(prev->ref_count); 
+                }
+        }
+
+        if (current == NULL) {
+                prev = NULL;
+        }
+        
+        std_ret:;
+        ARC_ATOMIC_DEC(parent->ref_count);
+        ARC_ATOMIC_DEC(node->ref_count);
+        return prev;
+}
+
 int graph_remove(ARC_GraphNode *node, bool free) {
         if (node == NULL) {
                 ARC_DEBUG(ERR, "No node given\n");
@@ -122,50 +161,32 @@ int graph_remove(ARC_GraphNode *node, bool free) {
         if ((rc = ARC_ATOMIC_INC(node->ref_count)) > 1) { // NOTE: Prevents other remove operations
                 ARC_ATOMIC_DEC(node->ref_count);
                 ARC_DEBUG(ERR, "Node in use or already being removed %d\n", rc);
+
                 return -2;
         }
 
         ARC_GraphNode *parent = node->parent;
         ARC_ATOMIC_INC(parent->ref_count);
-
-        full_recheck:;
-        if (parent != NULL && ARC_ATOMIC_LOAD(parent->child) == node) {
-                ARC_ATOMIC_XCHG(&parent->child, &node->next, &node->next);
-                node->parent = NULL;
-                // node->next = node; If not, something went wrong
-                goto skip;
-        }
-
-        ARC_GraphNode *current = ARC_ATOMIC_LOAD(parent->child);
         ARC_GraphNode *prev = NULL;
-        while (current != NULL && current != node) {
-                prev = current;
-                current = ARC_ATOMIC_LOAD(current->next);
-                if (current == prev) {
-                        ARC_DEBUG(INFO, "Current == Last, full recheck needed\n");
-                        goto full_recheck;
-                }
-
-                if (current != NULL) {
-                        ARC_ATOMIC_INC(current->ref_count);
-                }
-                ARC_ATOMIC_DEC(prev->ref_count);
-        }
-
-        if (current == NULL) {
-                ARC_DEBUG(ERR, "Parent %p has no children, yet node %p needs to be removed?\n", parent, node);
-                ARC_ATOMIC_DEC(parent->ref_count);
-                ARC_ATOMIC_DEC(node->ref_count);
-                return -3;
-        }
-
-        ARC_ATOMIC_XCHG(&prev->next, &node->next, &node->next);
-        // node->next = prev; If not, something went wrong
         
-        skip:;
-        ARC_ATOMIC_INC(parent->ref_count);
+        if ((parent != NULL && ARC_ATOMIC_LOAD(parent->child) == node)
+            || (prev = graph_get_prev(node)) == NULL) {
+                ARC_ATOMIC_XCHG(&parent->child, &node->next, &node->next);
+        } else if (prev != NULL) {
+                ARC_ATOMIC_XCHG(&prev->next, &node->next, &node->next);
+                ARC_ATOMIC_DEC(prev->ref_count);               
+        }
+
+        if (node->next != node) {
+                ARC_DEBUG(ERR, "Something went wrong\n");
+                ARC_HANG;
+        }
+
+        node->parent = NULL;
+        
         ARC_ATOMIC_DEC(parent->child_count);
-        
+        ARC_ATOMIC_DEC(parent->ref_count);       
+
         if (free) {
                 return graph_recursive_free(node) > 0 ? 0 : -4;
         } else {
