@@ -290,6 +290,8 @@ ARC_GraphNode *path_traverse(ARC_GraphNode *start, char *path, ARC_PathCreateCal
         ARC_GraphNode *parent = start;
         ARC_GraphNode *current = start;
 
+        ARC_ATOMIC_INC(current->ref_count);
+        
         size_t max = strlen(path);
         size_t i = 0;
         size_t j = SIZE_MAX;
