@@ -33,6 +33,11 @@
 
 #include <stddef.h>
 
+#define REMOVE_GUARD(_node_, _action_) \
+        if (ARC_ATOMIC_LOAD(_node_->next) == _node_) { \
+                _action_; \
+        } 
+
 static const char *graph_empty_name = "";
 
 ARC_GraphNode *graph_create(size_t arb_size) {
@@ -53,7 +58,11 @@ int graph_add(ARC_GraphNode *parent, ARC_GraphNode *node, char *_name) {
         if (parent == NULL || node == NULL) {
                 return -1;
         }
+        
+        REMOVE_GUARD(parent, return -2)
 
+        ARC_ATOMIC_INC(parent->ref_count);
+        
         char *name = graph_empty_name;
         if (_name != NULL) {
                 name = strdup(_name);
@@ -66,7 +75,8 @@ int graph_add(ARC_GraphNode *parent, ARC_GraphNode *node, char *_name) {
         node->parent = parent;
         ARC_ATOMIC_XCHG(&parent->child, &node, &node->next);
         ARC_ATOMIC_INC(parent->child_count);
-
+        ARC_ATOMIC_DEC(parent->ref_count);
+        
         return 0;
 }
 
@@ -75,6 +85,8 @@ ARC_GraphNode *graph_duplicate(ARC_GraphNode *node) {
                 return NULL;
         }
 
+        REMOVE_GUARD(node, return NULL)
+        
         ARC_GraphNode *dup = graph_create(node->arb_size);
 
         if (dup == NULL) {
@@ -201,6 +213,8 @@ ARC_GraphNode *graph_find(ARC_GraphNode *parent, char *targ) {
                 return NULL;
         }
 
+        REMOVE_GUARD(parent, return NULL)
+        
         ARC_ATOMIC_INC(parent->ref_count);
         full_recheck:;
         size_t a = ARC_ATOMIC_LOAD(parent->child_count);
