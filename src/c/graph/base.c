@@ -63,7 +63,7 @@ int graph_add(ARC_GraphNode *parent, ARC_GraphNode *node, char *_name) {
 
         ARC_ATOMIC_INC(parent->ref_count); // A
         
-        char *name = graph_empty_name;
+        char *name = *(char **)&graph_empty_name;
         if (_name != NULL) {
                 name = strdup(_name);
         } else if (node->name != NULL) {
