@@ -29,7 +29,7 @@
 #include <mm/allocator.h>
 #include <global.h>
 
-size_t ringbuffer_allocate(struct ARC_Ringbuffer *ringbuffer, int block) {
+size_t ringbuffer_allocate(ARC_Ringbuffer *ringbuffer, int block) {
 	if (ringbuffer == NULL) {
 		return -1;
 	}
@@ -49,7 +49,7 @@ size_t ringbuffer_allocate(struct ARC_Ringbuffer *ringbuffer, int block) {
 	return idx;
 }
 
-int ringbuffer_free(struct ARC_Ringbuffer *ringbuffer, size_t idx) {
+int ringbuffer_free(ARC_Ringbuffer *ringbuffer, size_t idx) {
 	if (ringbuffer == NULL || idx >= ringbuffer->obj_size) {
 		return -1;
 	}
@@ -59,7 +59,7 @@ int ringbuffer_free(struct ARC_Ringbuffer *ringbuffer, size_t idx) {
 	return 0;
 }
 
-size_t ringbuffer_write(struct ARC_Ringbuffer *ringbuffer, size_t idx, void *data) {
+size_t ringbuffer_write(ARC_Ringbuffer *ringbuffer, size_t idx, void *data) {
 	if (ringbuffer == NULL) {
 		return -1;
 	}
@@ -78,7 +78,7 @@ size_t ringbuffer_write(struct ARC_Ringbuffer *ringbuffer, size_t idx, void *dat
 	return idx;
 }
 
-struct ARC_Ringbuffer *init_ringbuffer(void *base, size_t objs, size_t obj_size) {
+ARC_Ringbuffer *init_ringbuffer(void *base, size_t objs, size_t obj_size) {
 	if (objs == 0 || obj_size == 0) {
 		return NULL;
 	}
@@ -97,5 +97,7 @@ struct ARC_Ringbuffer *init_ringbuffer(void *base, size_t objs, size_t obj_size)
 	ring->data_tail = -1;
 	init_static_mutex(&ring->lock);
 
+        ARC_DEBUG(INFO, "Created ringbuffer at %p (%lu objects of size %lu bytes)\n", ring->base, ring->objs, ring->obj_size);
+        
 	return ring;
 }

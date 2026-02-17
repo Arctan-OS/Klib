@@ -31,20 +31,20 @@
 #include <stddef.h>
 #include <lib/mutex.h>
 
-struct ARC_Ringbuffer {
+typedef struct ARC_Ringbuffer {
 	void *base; // The start of the buffer
 	size_t objs; // The number of objects this buffer can fit
 	size_t obj_size; // Size of each object
 	size_t idx; // The current 0-based index of the next free object
 	size_t data_tail;
 	ARC_Mutex lock;
-};
+} ARC_Ringbuffer;
 
-size_t ringbuffer_allocate(struct ARC_Ringbuffer *ringbuffer, int block);
-int ringbuffer_free(struct ARC_Ringbuffer *ringbuffer, size_t idx);
+size_t ringbuffer_allocate(ARC_Ringbuffer *ringbuffer, int block);
+int ringbuffer_free(ARC_Ringbuffer *ringbuffer, size_t idx);
 
-size_t ringbuffer_write(struct ARC_Ringbuffer *ringbuffer, size_t idx, void *data);
+size_t ringbuffer_write(ARC_Ringbuffer *ringbuffer, size_t idx, void *data);
 
-struct ARC_Ringbuffer *init_ringbuffer(void *base, size_t objs, size_t obj_size);
+ARC_Ringbuffer *init_ringbuffer(void *base, size_t objs, size_t obj_size);
 
 #endif
