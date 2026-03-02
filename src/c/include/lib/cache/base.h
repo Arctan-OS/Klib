@@ -27,16 +27,23 @@
 #ifndef ARC_LIB_CACHE_BASE_H
 #define ARC_LIB_CACHE_BASE_H
 
-#include "lib/spinlock.h"
+#include "drivers/resource.h"
 #include <stddef.h>
 #include <stdint.h>
 
+typedef struct ARC_CachePage {
+        void *base;
+        uint32_t ref_count;
+} ARC_CachePage;
+
 typedef struct ARC_CacheEntry {
-        void *vbase; // Virtual Base  - Where this data is stored in virtual memory
-        void *pbase; // Physical Base - Where this data is stored on physical media (RAM, disk, etc...)
+        struct ARC_CacheEntry *next;
+        struct ARC_CacheEntry *prev;
+        ARC_CachePage *page;
+        void *pbase;
         uint32_t ref_count;
         struct {
-                uint32_t sort_count; // Number of sort cycles entry has undergone
+                uint32_t grace;
                 union {
                         void *ptr;
                         uint64_t count;
@@ -45,23 +52,28 @@ typedef struct ARC_CacheEntry {
 } ARC_CacheEntry;
 
 typedef struct ARC_Cache {
-        size_t e_size;
+        ARC_Resource *res;
         int (*sort)(struct ARC_Cache *);
-        int e_count;
-        uint32_t grace_period; // sort_count >= grace_period: entry may be evicted
+        ARC_CacheEntry *entries;
+        size_t e_size;
+        int e_limit; // Maximum number of entries
+        int e_count; // Current number of entries
         uint32_t ref_count;
-        ARC_Spinlock reorder_lock;
-        ARC_CacheEntry *entries[];
 } ARC_Cache;
 
 typedef int (*ARC_CacheSorter)(ARC_Cache *);
 
-int cache_add(ARC_Cache *, void *, void *);
-int cache_evict_idx(ARC_Cache *, int);
-int cache_evict_vbase(ARC_Cache *, void *);
+ARC_CacheEntry *cache_add(ARC_Cache *, void *);
+ARC_CacheEntry *cache_grab(ARC_Cache *, ARC_CacheEntry *, void *);
 ARC_CacheEntry *cache_get(ARC_Cache *, void *);
+
+int cache_evict_entry(ARC_Cache *, ARC_CacheEntry *);
+int cache_evict_page(ARC_Cache *, void *);
+int cache_evict(ARC_Cache *, void *);
+
 int cache_schedule(ARC_Cache *);
+
 int uninit_cache(ARC_Cache *);
-ARC_Cache *init_cache(ARC_CacheSorter, int e_count, size_t e_size, uint32_t grace_period);
+ARC_Cache *init_cache(ARC_Resource *, ARC_CacheSorter, int e_count, size_t e_size);
 
 #endif
