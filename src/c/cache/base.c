@@ -164,7 +164,7 @@ int cache_sync(ARC_Cache *cache, ARC_CacheEntry *entry) {
         
         ARC_CachePage *page = entry->page;        
         const ARC_DriverDef *def = cache->res->driver;
-        ARC_File f = { .node = NULL, .offset = entry->pbase, .shared = NULL };
+        ARC_File f = { .node = NULL, .offset = (uintptr_t)entry->pbase };
         return (def->write(page->base, cache->e_size, 1, &f, cache->res) != cache->e_size);
 }
 
