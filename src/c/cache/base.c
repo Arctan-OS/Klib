@@ -61,6 +61,10 @@
   if rcount is non-zero write operations must wait, if wcount is non-zero read operations must wait.
 */
 
+// TODO: Should it be enforced that a cache is strictly e_limit elements long and that (e_count - e_limit) + 1
+//       entries are evicted if e_count >= e_limit, or should this be softly enforced so just the last entry is evicted,
+//       or should no entries be evicted at all and e_limit abolished?
+
 static ARC_CacheEntry *icache_add(ARC_Cache *cache, ARC_CachePage *page, void *pbase) {
         ARC_CacheEntry *entry = alloc(sizeof(*entry));
 
@@ -85,6 +89,14 @@ static ARC_CacheEntry *icache_add(ARC_Cache *cache, ARC_CachePage *page, void *p
         
         ARC_CacheEntry *t = entry;
         ARC_ATOMIC_XCHG(&cache->entries, &t, &entry->next);
+
+        if (t == NULL) {
+                ARC_ATOMIC_STORE(cache->tail, entry);
+        }
+        
+        if (ARC_ATOMIC_INC(cache->e_count) >= cache->e_limit) {
+                cache_evict_entry(cache, cache->tail);
+        }
         
         return entry;
 }
@@ -140,7 +152,6 @@ ARC_CacheEntry *cache_get(ARC_Cache *cache, void *pbase) {
                 t = entry;
                 ARC_ATOMIC_XCHG(&cache->entries, &t, &entry->next);
                 ARC_ATOMIC_SFENCE;
-
         }
         
         return entry;
@@ -165,9 +176,14 @@ int cache_evict_entry(ARC_Cache *cache, ARC_CacheEntry *entry) {
         void *t = NULL;
         ARC_ATOMIC_LFENCE;
         ARC_ATOMIC_XCHG(&entry->prev->next, &entry->next, (ARC_CacheEntry **)&t);
-        ARC_ATOMIC_XCHG(&entry->next->prev, &entry->prev, (ARC_CacheEntry **)&t);
+        ARC_ATOMIC_XCHG(&entry->prev, &entry->next->prev, (ARC_CacheEntry **)&t);
+        ARC_ATOMIC_DEC(cache->e_count);
         ARC_ATOMIC_SFENCE;
 
+        if (ARC_ATOMIC_LOAD(cache->tail) == entry) {
+                ARC_ATOMIC_STORE(cache->tail, t);
+        }
+        
         ARC_CachePage *page = entry->page;
         while (ARC_ATOMIC_LOAD(page->ref_count) > 0) {
                 // TODO: Pause

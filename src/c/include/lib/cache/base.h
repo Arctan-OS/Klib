@@ -55,6 +55,7 @@ typedef struct ARC_Cache {
         ARC_Resource *res;
         int (*sort)(struct ARC_Cache *);
         ARC_CacheEntry *entries;
+        ARC_CacheEntry *tail;
         size_t e_size;
         int e_limit; // Maximum number of entries
         int e_count; // Current number of entries
