@@ -5,11 +5,11 @@
  *
  * @LICENSE
  * Arctan-OS/Klib - Generic Kernel Functions and Data Structures
- * Copyright (C) 2023-2025 awewsomegamer
+ * Copyright (C) 2023-2026 awewsomegamer
  *
  * This file is part of Arctan-OS/Klib.
  *
- * Arctan is free software; you can redistribute it and/or
+ * Arctan-OS/Klib is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
  * as published by the Free Software Foundation; version 2
  *
